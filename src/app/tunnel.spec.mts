@@ -1,24 +1,105 @@
-import net from 'node:net';
+import { EventEmitter } from 'node:events';
 import { decodeMessage, MessageType } from './protocol.mjs';
-import { TunnelForwarder, TunnelListener } from './tunnel.mjs';
+import {
+  ITcpClientFactory,
+  ITcpServer,
+  ITcpServerFactory,
+  ITcpSocket,
+  TunnelForwarder,
+  TunnelListener,
+} from './tunnel.mjs';
 import { MockTransport } from './transport/mock.mjs';
 
-const wait = (ms: number): Promise<void> =>
-  new Promise((resolve) => {
-    setTimeout(resolve, ms);
-  });
+class MockTcpSocket extends EventEmitter implements ITcpSocket {
+  readonly writes: Buffer[] = [];
+  private closed = false;
 
-const getPort = (server: net.Server): number => {
-  const address = server.address();
-  if (!address || typeof address === 'string') {
-    throw new Error('Failed to resolve server address');
+  write(data: Buffer): boolean {
+    this.writes.push(Buffer.from(data));
+    return true;
   }
-  return address.port;
-};
+
+  destroy(): void {
+    if (this.closed) {
+      return;
+    }
+    this.closed = true;
+    this.emit('close');
+  }
+
+  pause(): void {
+    // no-op
+  }
+
+  resume(): void {
+    // no-op
+  }
+
+  emitData(data: Buffer): void {
+    this.emit('data', Buffer.from(data));
+  }
+
+  emitConnect(): void {
+    this.emit('connect');
+  }
+
+  emitError(error: Error): void {
+    this.emit('error', error);
+  }
+}
+
+class MockTcpServer implements ITcpServer {
+  private handler: ((socket: ITcpSocket) => void) | null = null;
+
+  setConnectionHandler(handler: (socket: ITcpSocket) => void): void {
+    this.handler = handler;
+  }
+
+  accept(socket: ITcpSocket): void {
+    if (!this.handler) {
+      throw new Error('Connection handler is not set');
+    }
+    this.handler(socket);
+  }
+
+  listen(_port: number, _host: string): void {
+    // no-op
+  }
+
+  close(): void {
+    // no-op
+  }
+}
+
+class MockTcpServerFactory implements ITcpServerFactory {
+  constructor(private readonly server: MockTcpServer) {}
+
+  createServer(connectionHandler: (socket: ITcpSocket) => void): ITcpServer {
+    this.server.setConnectionHandler(connectionHandler);
+    return this.server;
+  }
+}
+
+class MockTcpClientFactory implements ITcpClientFactory {
+  private readonly sockets: MockTcpSocket[] = [];
+
+  enqueueSocket(socket: MockTcpSocket): void {
+    this.sockets.push(socket);
+  }
+
+  createConnection(_options: { host: string; port: number }): ITcpSocket {
+    const socket = this.sockets.shift();
+    if (!socket) {
+      throw new Error('No queued socket');
+    }
+    return socket;
+  }
+}
 
 describe('TunnelListener', () => {
-  it('sends CONNECT when a TCP connection is accepted', async () => {
+  it('sends CONNECT when a TCP connection is accepted', () => {
     const transport = new MockTransport();
+    const tcpServer = new MockTcpServer();
     transport.setEvents({
       onOpen: () => {},
       onMessage: () => {},
@@ -27,38 +108,30 @@ describe('TunnelListener', () => {
       onBufferedAmountLow: () => {},
     });
 
-    const listener = new TunnelListener(31001, transport);
+    const listener = new TunnelListener(31001, transport, new MockTcpServerFactory(tcpServer));
     listener.start();
-    await wait(50);
 
-    const client = net.createConnection({ host: '127.0.0.1', port: 31001 });
-    await new Promise<void>((resolve) => client.once('connect', () => resolve()));
-    await wait(50);
+    tcpServer.accept(new MockTcpSocket());
 
     const sent = transport.getSentMessages();
     expect(sent.length).toBeGreaterThan(0);
     const first = decodeMessage(sent[0]);
     expect(first.type).toBe(MessageType.CONNECT);
 
-    client.destroy();
     listener.stop();
   });
 });
 
 describe('Tunnel integration', () => {
-  it('forwards TCP data via paired MockTransport', async () => {
-    const echoServer = net.createServer((socket) => {
-      socket.on('data', (chunk) => {
-        socket.write(Buffer.concat([Buffer.from('echo:'), chunk]));
-      });
-    });
-
-    await new Promise<void>((resolve) => echoServer.listen(0, '127.0.0.1', () => resolve()));
-    const echoPort = getPort(echoServer);
-
+  it('forwards TCP data via paired MockTransport and mock TCP sockets', () => {
     const [a, b] = MockTransport.createPair();
-    const listener = new TunnelListener(31002, a);
-    const forwarder = new TunnelForwarder('127.0.0.1', echoPort, b);
+    const tcpServer = new MockTcpServer();
+    const tcpClientFactory = new MockTcpClientFactory();
+    const targetSocket = new MockTcpSocket();
+    tcpClientFactory.enqueueSocket(targetSocket);
+
+    const listener = new TunnelListener(31002, a, new MockTcpServerFactory(tcpServer));
+    const forwarder = new TunnelForwarder('127.0.0.1', 18080, b, tcpClientFactory);
 
     a.setEvents({
       onOpen: () => {},
@@ -76,22 +149,17 @@ describe('Tunnel integration', () => {
     });
 
     listener.start();
-    await wait(50);
+    const localClient = new MockTcpSocket();
+    tcpServer.accept(localClient);
+    targetSocket.emitConnect();
 
-    const client = net.createConnection({ host: '127.0.0.1', port: 31002 });
-    await new Promise<void>((resolve) => client.once('connect', () => resolve()));
+    localClient.emitData(Buffer.from('ping'));
+    expect(targetSocket.writes.map((item) => item.toString('utf-8'))).toContain('ping');
 
-    client.write('ping');
+    targetSocket.emitData(Buffer.from('echo:ping'));
+    expect(localClient.writes.map((item) => item.toString('utf-8'))).toContain('echo:ping');
 
-    const data = await new Promise<Buffer>((resolve) => {
-      client.once('data', (chunk) => resolve(Buffer.from(chunk)));
-    });
-
-    expect(data.toString('utf-8')).toBe('echo:ping');
-
-    client.destroy();
     listener.stop();
     forwarder.stop();
-    await new Promise<void>((resolve, reject) => echoServer.close((error) => (error ? reject(error) : resolve())));
   });
 });

@@ -75,3 +75,10 @@ interface ITcpClientFactory {
 - `src/app/tunnel.spec.mts` — モック TCP を使用するテストに書き直し
 - `src/app/app.mts` — `TunnelListener` / `TunnelForwarder` 生成時にファクトリを渡す
 - `src/index.mts` — デフォルトファクトリの生成（必要に応じて）
+
+## 実施結果 (2026-03-16)
+
+- [x] `ITcpServerFactory` / `ITcpClientFactory` を `src/app/tunnel.mts` に追加し、`TunnelListener` / `TunnelForwarder` の TCP 生成を DI 化
+- [x] デフォルト実装として `node:net` ベースのファクトリを追加し、既存呼び出し側の互換を維持
+- [x] `src/app/tunnel.spec.mts` を実 TCP I/O なしのテストに置換
+- [x] Unit テストで `TunnelListener` の CONNECT 送信、および listener/forwarder 間のデータ往復をモックソケットで検証

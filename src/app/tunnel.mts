@@ -4,8 +4,55 @@ import { IP2PTransport } from './transport/interface.mjs';
 
 const HIGH_WATER_MARK = 1 * 1024 * 1024;
 
+/** トンネルで利用する最小限の TCP ソケット抽象。 */
+export interface ITcpSocket {
+  write(data: Buffer): boolean;
+  destroy(): void;
+  pause(): void;
+  resume(): void;
+  on(event: 'data', listener: (chunk: Buffer) => void): this;
+  on(event: 'close', listener: () => void): this;
+  on(event: 'error', listener: (error: Error) => void): this;
+  once(event: 'connect', listener: () => void): this;
+}
+
+/** トンネルで利用する最小限の TCP サーバ抽象。 */
+export interface ITcpServer {
+  listen(port: number, host: string): void;
+  close(): void;
+}
+
+/** TCP サーバ生成を注入するための抽象。 */
+export interface ITcpServerFactory {
+  createServer(connectionHandler: (socket: ITcpSocket) => void): ITcpServer;
+}
+
+/** TCP クライアント接続生成を注入するための抽象。 */
+export interface ITcpClientFactory {
+  createConnection(options: { host: string; port: number }): ITcpSocket;
+}
+
+/** node:net を使う本番向け TCP サーバファクトリ。 */
+class NodeTcpServerFactory implements ITcpServerFactory {
+  createServer(connectionHandler: (socket: ITcpSocket) => void): ITcpServer {
+    return net.createServer((socket) => {
+      connectionHandler(socket);
+    });
+  }
+}
+
+/** node:net を使う本番向け TCP クライアントファクトリ。 */
+class NodeTcpClientFactory implements ITcpClientFactory {
+  createConnection(options: { host: string; port: number }): ITcpSocket {
+    return net.createConnection(options);
+  }
+}
+
+const DEFAULT_TCP_SERVER_FACTORY = new NodeTcpServerFactory();
+const DEFAULT_TCP_CLIENT_FACTORY = new NodeTcpClientFactory();
+
 interface ConnectionEntry {
-  socket: net.Socket;
+  socket: ITcpSocket;
   paused: boolean;
   remoteClosing: boolean;
 }
@@ -15,13 +62,14 @@ interface ConnectionEntry {
  * ローカル TCP を待ち受け、P2P チャネル上の多重化プロトコルに変換する。
  */
 export class TunnelListener {
-  private server: net.Server | null = null;
+  private server: ITcpServer | null = null;
   private connections = new Map<number, ConnectionEntry>();
   private nextConnId = 1;
 
   constructor(
     private readonly listenPort: number,
     private readonly transport: IP2PTransport,
+    private readonly tcpServerFactory: ITcpServerFactory = DEFAULT_TCP_SERVER_FACTORY,
   ) {}
 
   start(): void {
@@ -29,7 +77,7 @@ export class TunnelListener {
       return;
     }
 
-    this.server = net.createServer((socket) => {
+    this.server = this.tcpServerFactory.createServer((socket) => {
       const connId = this.nextConnId;
       this.nextConnId += 1;
 
@@ -136,6 +184,7 @@ export class TunnelForwarder {
     private readonly forwardHost: string,
     private readonly forwardPort: number,
     private readonly transport: IP2PTransport,
+    private readonly tcpClientFactory: ITcpClientFactory = DEFAULT_TCP_CLIENT_FACTORY,
   ) {}
 
   handleRawMessage(raw: Buffer): void {
@@ -188,7 +237,7 @@ export class TunnelForwarder {
       return;
     }
 
-    const socket = net.createConnection({ host: this.forwardHost, port: this.forwardPort });
+    const socket = this.tcpClientFactory.createConnection({ host: this.forwardHost, port: this.forwardPort });
 
     const entry: ConnectionEntry = {
       socket,

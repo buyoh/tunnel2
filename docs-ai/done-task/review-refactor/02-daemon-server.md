@@ -92,3 +92,11 @@ class DaemonServer {
 - `src/app/daemon-server.mts` — `DaemonController` を抽出、`DaemonServer` を薄くする
 - `src/app/daemon-server.spec.mts` — `DaemonController` を直接テストするように書き直し
 - `src/daemon.mts` — `DaemonController` の生成を追加（軽微）
+
+## 実施結果 (2026-03-16)
+
+- [x] `src/app/daemon-server.mts` に `DaemonController` を追加し、イベント履歴・最終コマンド管理・コマンドディスパッチを分離
+- [x] `DaemonServer` を HTTP ルーティング専用の薄いラッパーに変更
+- [x] `executeCommand()` に引数バリデーション（`port`, `host`, `encoded`, `args` 型）を追加
+- [x] `src/app/daemon-server.spec.mts` を実ファイル/実ソケット不要の `DaemonController` テストへ置換
+- [x] `src/daemon.mts` で `DaemonController` を組み立てるよう更新

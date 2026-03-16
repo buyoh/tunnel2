@@ -17,26 +17,81 @@ interface LastCommand {
   timestamp: string; // ISO 8601
 }
 
-const MAX_EVENTS = 100;
+/** /api/status で返す daemon の状態。 */
+interface StatusResponse {
+  state: ReturnType<TunnelApp['getState']>;
+  events: DaemonEvent[];
+  lastCommand: LastCommand | null;
+}
 
-/**
- * TunnelApp をラップし、Unix domain socket 上の HTTP サーバを提供する。
- * bash スクリプトから `curl --unix-socket` でコマンドを受け付ける。
- */
-export class DaemonServer {
-  private readonly expressApp: express.Application;
-  private readonly httpServer: http.Server;
+/** コマンド実行結果。 */
+interface CommandResponse {
+  ok: boolean;
+  error?: string;
+}
+
+/** HTTP とは独立したコマンド処理・イベント記録を担う。 */
+export class DaemonController {
   private readonly events: DaemonEvent[] = [];
   private lastCommand: LastCommand | undefined;
 
-  constructor(
-    private readonly app: TunnelApp,
-    private readonly socketPath: string,
-  ) {
-    this.expressApp = express();
-    this.httpServer = http.createServer(this.expressApp);
+  constructor(private readonly app: TunnelApp) {
     this.setupEventListeners();
-    this.setupRoutes();
+  }
+
+  getStatus(): StatusResponse {
+    return {
+      state: this.app.getState(),
+      events: [...this.events],
+      lastCommand: this.lastCommand ?? null,
+    };
+  }
+
+  async executeCommand(action: unknown, args: unknown): Promise<{ status: number; body: CommandResponse }> {
+    if (typeof action !== 'string' || action.length === 0) {
+      return { status: 400, body: { ok: false, error: 'action is required' } };
+    }
+
+    const normalizedArgs = this.normalizeArgs(args);
+    if (!normalizedArgs.ok) {
+      this.recordLastCommand(action, false, normalizedArgs.error);
+      return { status: 400, body: { ok: false, error: normalizedArgs.error } };
+    }
+
+    try {
+      switch (action) {
+        case 'listen':
+          await this.app.listen(this.getPortArg(normalizedArgs.value.port, 'listen.port'));
+          break;
+        case 'forward':
+          await this.app.forward(
+            this.getHostArg(normalizedArgs.value.host, 'forward.host'),
+            this.getPortArg(normalizedArgs.value.port, 'forward.port'),
+          );
+          break;
+        case 'set-remote-offer':
+          await this.app.setRemoteOffer(this.getEncodedArg(normalizedArgs.value.encoded, 'set-remote-offer.encoded'));
+          break;
+        case 'set-remote-answer':
+          await this.app.setRemoteAnswer(this.getEncodedArg(normalizedArgs.value.encoded, 'set-remote-answer.encoded'));
+          break;
+        case 'close':
+          this.app.close();
+          break;
+        default: {
+          const error = `unknown action: ${action}`;
+          this.recordLastCommand(action, false, error);
+          return { status: 400, body: { ok: false, error } };
+        }
+      }
+
+      this.recordLastCommand(action, true);
+      return { status: 200, body: { ok: true } };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.recordLastCommand(action, false, message);
+      return { status: 400, body: { ok: false, error: message } };
+    }
   }
 
   /** TunnelApp のイベントを購読して内部配列に蓄積する */
@@ -55,69 +110,74 @@ export class DaemonServer {
     this.app.on('error', (err: Error) => push('error', err.message));
   }
 
+  private recordLastCommand(action: string, ok: boolean, error?: string): void {
+    this.lastCommand = { action, ok, error, timestamp: new Date().toISOString() };
+  }
+
+  private normalizeArgs(args: unknown): { ok: true; value: Record<string, unknown> } | { ok: false; error: string } {
+    if (args === undefined || args === null) {
+      return { ok: true, value: {} };
+    }
+    if (typeof args !== 'object' || Array.isArray(args)) {
+      return { ok: false, error: 'args must be an object' };
+    }
+    return { ok: true, value: args as Record<string, unknown> };
+  }
+
+  private getPortArg(value: unknown, field: string): number {
+    if (typeof value !== 'number' || !Number.isInteger(value) || value < 1 || value > 65535) {
+      throw new Error(`${field} must be an integer between 1 and 65535`);
+    }
+    return value;
+  }
+
+  private getHostArg(value: unknown, field: string): string {
+    if (typeof value !== 'string' || value.length === 0) {
+      throw new Error(`${field} must be a non-empty string`);
+    }
+    return value;
+  }
+
+  private getEncodedArg(value: unknown, field: string): string {
+    if (typeof value !== 'string' || value.length === 0) {
+      throw new Error(`${field} must be a non-empty string`);
+    }
+    return value;
+  }
+}
+
+const MAX_EVENTS = 100;
+
+/**
+ * TunnelApp をラップし、Unix domain socket 上の HTTP サーバを提供する。
+ * bash スクリプトから `curl --unix-socket` でコマンドを受け付ける。
+ */
+export class DaemonServer {
+  private readonly expressApp: express.Application;
+  private readonly httpServer: http.Server;
+
+  constructor(
+    private readonly controller: DaemonController,
+    private readonly socketPath: string,
+  ) {
+    this.expressApp = express();
+    this.httpServer = http.createServer(this.expressApp);
+    this.setupRoutes();
+  }
+
   /** Express ルートを設定する */
   private setupRoutes(): void {
     this.expressApp.use(express.json());
 
-    this.expressApp.get('/api/status', (req, res) => {
-      this.handleStatus(req, res);
+    this.expressApp.get('/api/status', (_req, res) => {
+      res.json(this.controller.getStatus());
     });
 
     this.expressApp.post('/api/command', async (req, res) => {
-      await this.handleCommand(req, res);
+      const body = req.body as { action?: unknown; args?: unknown };
+      const result = await this.controller.executeCommand(body.action, body.args);
+      res.status(result.status).json(result.body);
     });
-  }
-
-  /** GET /api/status — 現在の状態・イベント履歴・最終コマンドを返す */
-  private handleStatus(_req: express.Request, res: express.Response): void {
-    res.json({
-      state: this.app.getState(),
-      events: this.events,
-      lastCommand: this.lastCommand ?? null,
-    });
-  }
-
-  /** POST /api/command — TunnelApp のメソッドを呼び出す */
-  private async handleCommand(req: express.Request, res: express.Response): Promise<void> {
-    const body = req.body as { action?: string; args?: Record<string, unknown> };
-    const action = body.action;
-    const args = body.args ?? {};
-
-    if (!action) {
-      res.status(400).json({ ok: false, error: 'action is required' });
-      return;
-    }
-
-    try {
-      switch (action) {
-        case 'listen':
-          await this.app.listen(args.port as number);
-          break;
-        case 'forward':
-          await this.app.forward(args.host as string, args.port as number);
-          break;
-        case 'set-remote-offer':
-          await this.app.setRemoteOffer(args.encoded as string);
-          break;
-        case 'set-remote-answer':
-          await this.app.setRemoteAnswer(args.encoded as string);
-          break;
-        case 'close':
-          this.app.close();
-          break;
-        default:
-          res.status(400).json({ ok: false, error: `unknown action: ${action}` });
-          this.lastCommand = { action, ok: false, error: `unknown action: ${action}`, timestamp: new Date().toISOString() };
-          return;
-      }
-
-      this.lastCommand = { action, ok: true, timestamp: new Date().toISOString() };
-      res.status(200).json({ ok: true });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      this.lastCommand = { action, ok: false, error: message, timestamp: new Date().toISOString() };
-      res.status(400).json({ ok: false, error: message });
-    }
   }
 
   /** サーバを起動して Unix domain socket で listen 開始する */

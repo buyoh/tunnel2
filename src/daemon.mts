@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { DataChannelTransport } from './app/transport/datachannel.mjs';
 import { TunnelApp } from './app/app.mjs';
-import { DaemonServer } from './app/daemon-server.mjs';
+import { DaemonController, DaemonServer } from './app/daemon-server.mjs';
 
 /** --id <id> を process.argv からパースする。省略時は "default" */
 function parseDaemonId(argv: string[]): string {
@@ -31,7 +31,8 @@ async function main(): Promise<void> {
 
   const transport = new DataChannelTransport();
   const app = new TunnelApp(transport);
-  const server = new DaemonServer(app, SOCK_FILE);
+  const controller = new DaemonController(app);
+  const server = new DaemonServer(controller, SOCK_FILE);
 
   await server.start();
 
