@@ -6,7 +6,7 @@
 
 ## 状態
 
-未解決
+解決済み
 
 ## 失敗したテスト
 
@@ -31,7 +31,7 @@ Resolved to value: {"candidates": [...], "sdp": "", "type": "offer"}
 
 ## 解決策の候補
 
-1. **`acceptOffer` テストと同じパターンに変更する**  
+1. **`acceptOffer` テストと同じパターンに変更する** ← 採用  
    `try/catch` でキャッチし、エラーが `is not a function` でないことを確認する。  
    `createOffer()` が resolve した場合も（API エラーがないことを示すので）パスとして扱う。
 
