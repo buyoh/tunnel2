@@ -1,12 +1,40 @@
 import nodeDataChannel from 'node-datachannel';
 import { SignalingData } from '../signaling.mjs';
-import { IP2PTransport, P2PTransportEvents } from './interface.mjs';
+import { IP2PTransport, P2PChannelState, P2PTransportEvents } from './interface.mjs';
+
+type DataChannelMessage = string | Buffer | ArrayBuffer;
+
+interface DataChannelLike {
+  close(): void;
+  sendMessageBinary(buffer: Buffer): boolean;
+  isOpen(): boolean;
+  bufferedAmount(): number;
+  setBufferedAmountLowThreshold(newSize: number): void;
+  onOpen(cb: () => void): void;
+  onClosed?: (cb: () => void) => void;
+  onBufferedAmountLow?: (cb: () => void) => void;
+  onMessage(cb: (msg: DataChannelMessage) => void): void;
+}
+
+interface PeerConnectionLike {
+  close(): void;
+  setRemoteDescription(sdp: string, type: SignalingData['type']): void;
+  addRemoteCandidate(candidate: string, mid: string): void;
+  createDataChannel(label: string): DataChannelLike;
+  onStateChange(cb: (state: string) => void): void;
+  onDataChannel(cb: (dc: DataChannelLike) => void): void;
+  onLocalDescription(cb: (sdp: string, type: string) => void): void;
+  onLocalCandidate(cb: (candidate: string, mid: string) => void): void;
+  onGatheringStateChange(cb: (state: string) => void): void;
+}
+
+interface NodeDataChannelModule {
+  PeerConnection: new (label: string, config: { iceServers: string[] }) => PeerConnectionLike;
+}
 
 interface DataChannelTransportConfig {
   iceServers?: string[];
-  nodeDataChannelModule?: {
-    PeerConnection: new (label: string, config: { iceServers: string[] }) => any;
-  };
+  nodeDataChannelModule?: NodeDataChannelModule;
 }
 
 const DEFAULT_ICE_SERVERS = ['stun:stun.l.google.com:19302'];
@@ -16,19 +44,18 @@ const DEFAULT_ICE_SERVERS = ['stun:stun.l.google.com:19302'];
  * 単体テストでは MockTransport を使用し、本実装は実行時に利用する。
  */
 export class DataChannelTransport implements IP2PTransport {
-  private readonly config: DataChannelTransportConfig;
-  private readonly nodeDataChannelModule: {
-    PeerConnection: new (label: string, config: { iceServers: string[] }) => any;
-  };
+  private readonly config: { iceServers: string[] };
+  private readonly nodeDataChannelModule: NodeDataChannelModule;
   private events: P2PTransportEvents | null = null;
-  private peer: any = null;
-  private dc: any = null;
+  private peer: PeerConnectionLike | null = null;
+  private dc: DataChannelLike | null = null;
 
   constructor(config: DataChannelTransportConfig = {}) {
     this.config = {
       iceServers: config.iceServers ?? DEFAULT_ICE_SERVERS,
     };
-    this.nodeDataChannelModule = config.nodeDataChannelModule ?? (nodeDataChannel as any);
+    this.nodeDataChannelModule =
+      config.nodeDataChannelModule ?? (nodeDataChannel as unknown as NodeDataChannelModule);
   }
 
   setEvents(events: P2PTransportEvents): void {
@@ -37,22 +64,36 @@ export class DataChannelTransport implements IP2PTransport {
 
   async createOffer(): Promise<SignalingData> {
     this.createPeer();
-    this.dc = this.peer.createDataChannel('tunnel');
+    const peer = this.peer;
+    if (!peer) {
+      throw new Error('Peer is not initialized');
+    }
+    // onLocalDescription が createDataChannel() で同期的に発火する場合があるため、
+    // ハンドラ登録を先に行う
+    const promise = this.waitForLocalDescription('offer');
+    this.dc = peer.createDataChannel('tunnel');
     this.bindDataChannel(this.dc);
-    return this.waitForLocalDescription('offer');
+    return promise;
   }
 
   async acceptOffer(offer: SignalingData): Promise<SignalingData> {
     this.createPeer();
-    this.peer.onDataChannel((dc: any) => {
+    const peer = this.peer;
+    if (!peer) {
+      throw new Error('Peer is not initialized');
+    }
+    // onLocalDescription が setRemoteDescription() で同期的に発火する場合があるため、
+    // ハンドラ登録を先に行う
+    const promise = this.waitForLocalDescription('answer');
+    peer.onDataChannel((dc: DataChannelLike) => {
       this.dc = dc;
       this.bindDataChannel(dc);
     });
-    this.peer.setRemoteDescription(offer.sdp, offer.type);
+    peer.setRemoteDescription(offer.sdp, offer.type);
     for (const candidate of offer.candidates) {
-      this.peer.addRemoteCandidate(candidate.candidate, candidate.mid);
+      peer.addRemoteCandidate(candidate.candidate, candidate.mid);
     }
-    return this.waitForLocalDescription('answer');
+    return promise;
   }
 
   applyAnswer(answer: SignalingData): void {
@@ -106,15 +147,14 @@ export class DataChannelTransport implements IP2PTransport {
   }
 
   private createPeer(): void {
-    const ndc = this.nodeDataChannelModule as any;
-    if (!ndc || typeof ndc.PeerConnection !== 'function') {
+    if (!this.nodeDataChannelModule || typeof this.nodeDataChannelModule.PeerConnection !== 'function') {
       throw new Error('node-datachannel is not available');
     }
-    this.peer = new ndc.PeerConnection('tunnel', {
+    this.peer = new this.nodeDataChannelModule.PeerConnection('tunnel', {
       iceServers: this.config.iceServers,
     });
     this.peer.onStateChange((state: string) => {
-      this.events?.onStateChange(state as any);
+      this.events?.onStateChange(state as P2PChannelState);
       // node-datachannel v0.32.1 には PeerConnection.onClosed がないため、
       // state change の closed / failed を接続終了として扱う。
       if (state === 'closed' || state === 'failed') {
@@ -123,20 +163,24 @@ export class DataChannelTransport implements IP2PTransport {
     });
   }
 
-  private bindDataChannel(dc: any): void {
+  private bindDataChannel(dc: DataChannelLike): void {
     dc.onOpen(() => {
       this.events?.onOpen();
     });
-    dc.onMessage((message: any) => {
-      const data = Buffer.isBuffer(message) ? message : Buffer.from(message);
+    dc.onMessage((message: DataChannelMessage) => {
+      const data = Buffer.isBuffer(message)
+        ? message
+        : message instanceof ArrayBuffer
+          ? Buffer.from(new Uint8Array(message))
+          : Buffer.from(message);
       this.events?.onMessage(data);
     });
-    if (typeof dc.onClosed === 'function') {
+    if (dc.onClosed) {
       dc.onClosed(() => {
         this.events?.onClosed();
       });
     }
-    if (typeof dc.onBufferedAmountLow === 'function') {
+    if (dc.onBufferedAmountLow) {
       dc.onBufferedAmountLow(() => {
         this.events?.onBufferedAmountLow();
       });
@@ -144,7 +188,8 @@ export class DataChannelTransport implements IP2PTransport {
   }
 
   private waitForLocalDescription(type: 'offer' | 'answer'): Promise<SignalingData> {
-    if (!this.peer) {
+    const peer = this.peer;
+    if (!peer) {
       throw new Error('Peer is not initialized');
     }
 
@@ -156,17 +201,17 @@ export class DataChannelTransport implements IP2PTransport {
         reject(new Error('ICE gathering timeout'));
       }, 30_000);
 
-      this.peer.onLocalDescription((sdp: string, sdpType: string) => {
+      peer.onLocalDescription((sdp: string, sdpType: string) => {
         if (sdpType === type) {
           localSdp = sdp;
         }
       });
 
-      this.peer.onLocalCandidate((candidate: string, mid: string) => {
+      peer.onLocalCandidate((candidate: string, mid: string) => {
         candidates.push({ candidate, mid });
       });
 
-      this.peer.onGatheringStateChange((state: string) => {
+      peer.onGatheringStateChange((state: string) => {
         if (state !== 'complete') {
           return;
         }

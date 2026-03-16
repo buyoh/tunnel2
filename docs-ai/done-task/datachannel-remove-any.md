@@ -111,3 +111,18 @@ interface DataChannelLike {
   ただし将来的に `Uint8Array` を受け付ける必要が出た場合はサブセット型を拡張する。
 - `onStateChange` の `state` パラメータは `node-datachannel` 側で `string` のため、
   `P2PChannelState` へのキャストは明示的に行う（型安全ではないが node-datachannel 側が string を返す以上避けられない）。
+
+## 進捗 (2026-03-16)
+
+- [x] `datachannel.mts` の `any` をサブセット型 (`PeerConnectionLike`, `DataChannelLike`) へ置換
+- [x] `datachannel.spec.mts` の `any` を具体型へ置換
+- [x] 追加テスト: `ArrayBuffer` メッセージを `Buffer` に変換してイベントへ渡すケースを追加
+- [x] テスト実行
+  - `npm test -- src/app/transport/datachannel.spec.mts`: 成功 (7 tests)
+  - `npm test`: 成功 (5 suites, 24 tests)
+
+## 実装結果
+
+- `nodeDataChannelModule`, `peer`, `dc` の `any` を削除し、DI 境界を構造的に型付け
+- `onMessage` を `string | Buffer | ArrayBuffer` で受け、`ArrayBuffer` は `Uint8Array` 経由で `Buffer` へ変換
+- `onClosed`, `onBufferedAmountLow` を optional メソッドとして扱い、旧 API 互換を維持

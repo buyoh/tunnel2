@@ -1,9 +1,23 @@
 import { DataChannelTransport } from './datachannel.mjs';
 import { P2PTransportEvents } from './interface.mjs';
 
+type DataChannelMessage = string | Buffer | ArrayBuffer;
+
+interface DataChannelLike {
+  close(): void;
+  sendMessageBinary(data: Buffer): boolean;
+  isOpen(): boolean;
+  bufferedAmount(): number;
+  setBufferedAmountLowThreshold(size: number): void;
+  onOpen(handler: () => void): void;
+  onClosed?(handler: () => void): void;
+  onMessage(handler: (message: DataChannelMessage) => void): void;
+  onBufferedAmountLow?(handler: () => void): void;
+}
+
 class FakePeerConnection {
   private onStateChangeHandler: ((state: string) => void) | null = null;
-  private onDataChannelHandler: ((dc: any) => void) | null = null;
+  private onDataChannelHandler: ((dc: DataChannelLike) => void) | null = null;
   private onLocalDescriptionHandler: ((sdp: string, type: string) => void) | null = null;
   private onLocalCandidateHandler: ((candidate: string, mid: string) => void) | null = null;
   private onGatheringStateChangeHandler: ((state: string) => void) | null = null;
@@ -20,7 +34,7 @@ class FakePeerConnection {
     this.onStateChangeHandler = handler;
   }
 
-  onDataChannel(handler: (dc: any) => void): void {
+  onDataChannel(handler: (dc: DataChannelLike) => void): void {
     this.onDataChannelHandler = handler;
   }
 
@@ -52,7 +66,7 @@ class FakePeerConnection {
     this.onStateChangeHandler?.(state);
   }
 
-  emitDataChannel(dc: any): void {
+  emitDataChannel(dc: DataChannelLike): void {
     this.onDataChannelHandler?.(dc);
   }
 
@@ -71,7 +85,7 @@ class FakePeerConnection {
 
 class FakeDataChannel {
   private onOpenHandler: (() => void) | null = null;
-  private onMessageHandler: ((message: any) => void) | null = null;
+  private onMessageHandler: ((message: DataChannelMessage) => void) | null = null;
   private onClosedHandler: (() => void) | null = null;
   private onBufferedAmountLowHandler: (() => void) | null = null;
 
@@ -79,7 +93,7 @@ class FakeDataChannel {
     this.onOpenHandler = handler;
   }
 
-  onMessage(handler: (message: any) => void): void {
+  onMessage(handler: (message: DataChannelMessage) => void): void {
     this.onMessageHandler = handler;
   }
 
@@ -103,8 +117,8 @@ class FakeDataChannel {
     return true;
   }
 
-  sendMessageBinary(_data: Buffer): void {
-    // no-op
+  sendMessageBinary(_data: Buffer): boolean {
+    return true;
   }
 
   close(): void {
@@ -115,7 +129,7 @@ class FakeDataChannel {
     this.onOpenHandler?.();
   }
 
-  emitMessage(message: any): void {
+  emitMessage(message: DataChannelMessage): void {
     this.onMessageHandler?.(message);
   }
 
@@ -130,14 +144,34 @@ class FakeDataChannel {
 
 class FakeDataChannelWithoutOnClosed {
   private onOpenHandler: (() => void) | null = null;
-  private onMessageHandler: ((message: any) => void) | null = null;
+  private onMessageHandler: ((message: DataChannelMessage) => void) | null = null;
   private onBufferedAmountLowHandler: (() => void) | null = null;
+
+  bufferedAmount(): number {
+    return 0;
+  }
+
+  setBufferedAmountLowThreshold(_size: number): void {
+    // no-op
+  }
+
+  isOpen(): boolean {
+    return true;
+  }
+
+  sendMessageBinary(_data: Buffer): boolean {
+    return true;
+  }
+
+  close(): void {
+    // no-op
+  }
 
   onOpen(handler: () => void): void {
     this.onOpenHandler = handler;
   }
 
-  onMessage(handler: (message: any) => void): void {
+  onMessage(handler: (message: DataChannelMessage) => void): void {
     this.onMessageHandler = handler;
   }
 
@@ -149,7 +183,7 @@ class FakeDataChannelWithoutOnClosed {
     this.onOpenHandler?.();
   }
 
-  emitMessage(message: any): void {
+  emitMessage(message: DataChannelMessage): void {
     this.onMessageHandler?.(message);
   }
 
@@ -240,6 +274,44 @@ describe('DataChannelTransport', () => {
       type: 'answer',
       candidates: [],
     });
+  });
+
+  it('converts ArrayBuffer message to Buffer before passing to events', async () => {
+    const peers: FakePeerConnection[] = [];
+    const transport = new DataChannelTransport({
+      nodeDataChannelModule: {
+        PeerConnection: class extends FakePeerConnection {
+          constructor(label: string, config: { iceServers: string[] }) {
+            super(label, config);
+            peers.push(this);
+          }
+        },
+      },
+    });
+
+    let received: Buffer | null = null;
+    transport.setEvents({
+      onOpen: () => {},
+      onMessage: (data) => {
+        received = data;
+      },
+      onClosed: () => {},
+      onStateChange: () => {},
+      onBufferedAmountLow: () => {},
+    });
+
+    const offerPromise = transport.createOffer();
+    const peer = peers[0];
+    const dataChannel = peer.createdDataChannel;
+
+    peer.emitLocalDescription('sdp-offer', 'offer');
+    peer.emitGatheringStateChange('complete');
+    await offerPromise;
+
+    const payload = new Uint8Array([1, 2, 3, 4]).buffer;
+    dataChannel.emitMessage(payload);
+
+    expect(received).toEqual(Buffer.from([1, 2, 3, 4]));
   });
 });
 
