@@ -21,7 +21,7 @@ trap cleanup EXIT
 cleanup
 
 ###############################################
-step "1. daemon 起動 (alice)"
+step "1. Start daemon (alice)"
 if scripts/daemon-start.sh --id alice >/dev/null 2>&1; then
   ok "alice daemon started"
 else
@@ -31,7 +31,7 @@ else
 fi
 
 ###############################################
-step "2. ステータス確認 (alice: idle)"
+step "2. Check status (alice: idle)"
 STATUS=$(scripts/daemon-status.sh --id alice 2>/dev/null)
 STATE=$(echo "$STATUS" | node -e "const d=require('fs').readFileSync('/dev/stdin','utf8');console.log(JSON.parse(d).state)")
 if [[ "$STATE" == "idle" ]]; then
@@ -41,7 +41,7 @@ else
 fi
 
 ###############################################
-step "3. listen コマンド (alice)"
+step "3. listen command (alice)"
 RESULT=$(scripts/daemon-post.sh --id alice listen port=18080 2>/dev/null) || true
 if echo "$RESULT" | grep -q '"ok":true'; then
   ok "listen accepted"
@@ -50,7 +50,7 @@ else
 fi
 
 ###############################################
-step "4. offer-ready イベント確認 (alice)"
+step "4. Check offer-ready event (alice)"
 sleep 2
 STATUS=$(scripts/daemon-status.sh --id alice 2>/dev/null)
 OFFER=$(echo "$STATUS" | node -e "
@@ -71,7 +71,7 @@ else
 fi
 
 ###############################################
-step "5. daemon 起動 (bob)"
+step "5. Start daemon (bob)"
 if scripts/daemon-start.sh --id bob >/dev/null 2>&1; then
   ok "bob daemon started"
 else
@@ -80,7 +80,7 @@ else
 fi
 
 ###############################################
-step "6. forward コマンド (bob)"
+step "6. forward command (bob)"
 RESULT=$(scripts/daemon-post.sh --id bob forward host=localhost port=8080 2>/dev/null) || true
 if echo "$RESULT" | grep -q '"ok":true'; then
   ok "forward accepted"
@@ -89,7 +89,7 @@ else
 fi
 
 ###############################################
-step "7. set-remote-offer (bob <- alice の offer)"
+step "7. set-remote-offer (bob <- alice's offer)"
 if [[ -n "$OFFER" ]]; then
   RESULT=$(scripts/daemon-post.sh --id bob set-remote-offer encoded="$OFFER" 2>/dev/null) || true
   if echo "$RESULT" | grep -q '"ok":true'; then
@@ -102,7 +102,7 @@ else
 fi
 
 ###############################################
-step "8. answer-ready イベント確認 (bob)"
+step "8. Check answer-ready event (bob)"
 sleep 2
 STATUS=$(scripts/daemon-status.sh --id bob 2>/dev/null)
 ANSWER=$(echo "$STATUS" | node -e "
@@ -123,7 +123,7 @@ else
 fi
 
 ###############################################
-step "9. set-remote-answer (alice <- bob の answer)"
+step "9. set-remote-answer (alice <- bob's answer)"
 if [[ -n "$ANSWER" ]]; then
   RESULT=$(scripts/daemon-post.sh --id alice set-remote-answer encoded="$ANSWER" 2>/dev/null) || true
   if echo "$RESULT" | grep -q '"ok":true'; then
@@ -136,7 +136,7 @@ else
 fi
 
 ###############################################
-step "10. 接続状態確認"
+step "10. Check connection state"
 sleep 3
 ALICE_STATE=$(scripts/daemon-status.sh --id alice 2>/dev/null | node -e "const d=require('fs').readFileSync('/dev/stdin','utf8');console.log(JSON.parse(d).state)")
 BOB_STATE=$(scripts/daemon-status.sh --id bob 2>/dev/null | node -e "const d=require('fs').readFileSync('/dev/stdin','utf8');console.log(JSON.parse(d).state)")
@@ -155,7 +155,7 @@ else
 fi
 
 ###############################################
-step "11. close コマンド"
+step "11. close command"
 RESULT=$(scripts/daemon-post.sh --id alice close 2>/dev/null) || true
 if echo "$RESULT" | grep -q '"ok":true'; then
   ok "close accepted"
@@ -164,7 +164,7 @@ else
 fi
 
 ###############################################
-step "12. daemon 停止"
+step "12. Stop daemons"
 scripts/daemon-stop.sh --id alice >/dev/null 2>&1
 scripts/daemon-stop.sh --id bob   >/dev/null 2>&1
 ok "daemons stopped"

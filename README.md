@@ -1,95 +1,95 @@
 # tunnel2
 
-node-datachannel を使った P2P の TCP トンネル。
+A P2P TCP tunnel using node-datachannel.
 
 ## How to use
 
-2 台のマシン（以下 Alice / Bob）間で TCP トンネルを張る手順を示す。
-Alice 側でローカルポートを listen し、Bob 側が転送先に forward する。
+This guide shows how to establish a TCP tunnel between two machines (referred to as Alice and Bob).
+Alice listens on a local port, and Bob forwards traffic to the destination.
 
-### CLI モード
+### CLI Mode
 
-対話的に操作する場合は `npm run start` を使う。
+Use `npm run start` for interactive operation.
 
-#### Alice（listen 側）
+#### Alice (listen side)
 
 ```bash
 npm run start -- listen 8080
 ```
 
-- listen するとオファー情報（Base64 文字列）がコンソールに表示される
-- このオファー情報を Bob に渡す
+- After listening, the offer info (Base64 string) is displayed in the console.
+- Send this offer info to Bob.
 
-Bob からアンサー情報を受け取ったら、プロンプトに貼り付けて Enter を押す。
+When you receive the answer info from Bob, paste it into the prompt and press Enter.
 
-#### Bob（forward 側）
+#### Bob (forward side)
 
 ```bash
 npm run start -- forward localhost:3000
 ```
 
-- Alice からオファー情報を受け取ったら、プロンプトに貼り付けて Enter を押す
-- アンサー情報がコンソールに表示されるので、Alice に渡す
+- When you receive the offer info from Alice, paste it into the prompt and press Enter.
+- The answer info is displayed in the console — send it to Alice.
 
-#### 全体の流れ
+#### Overall flow
 
-1. **Alice**: `npm run start -- listen <port>` を実行
-2. **Alice**: 表示されたオファー情報を Bob に送る
-3. **Bob**: `npm run start -- forward <host:port>` を実行
-4. **Bob**: Alice のオファー情報をプロンプトに貼り付ける
-5. **Bob**: 表示されたアンサー情報を Alice に送る
-6. **Alice**: Bob のアンサー情報をプロンプトに貼り付ける
-7. P2P 接続が確立し、Alice の `<port>` への接続が Bob の `<host:port>` に転送される
+1. **Alice**: Run `npm run start -- listen <port>`
+2. **Alice**: Send the displayed offer info to Bob
+3. **Bob**: Run `npm run start -- forward <host:port>`
+4. **Bob**: Paste Alice's offer info into the prompt
+5. **Bob**: Send the displayed answer info to Alice
+6. **Alice**: Paste Bob's answer info into the prompt
+7. P2P connection is established — connections to Alice's `<port>` are forwarded to Bob's `<host:port>`
 
-### Daemon モード
+### Daemon Mode
 
-バックグラウンドで動かす場合はシェルスクリプトを使う。
-すべてのスクリプトは `--id <id>` オプションで daemon を識別する（省略時は `default`）。
-異なる ID を指定すれば、同一環境で複数の daemon を同時に起動できる。
+Use shell scripts to run in the background.
+All scripts identify the daemon via the `--id <id>` option (defaults to `default` if omitted).
+Multiple daemons can run simultaneously in the same environment by specifying different IDs.
 
-#### Daemon の起動・停止
+#### Starting and stopping the daemon
 
 ```bash
-# 起動
+# Start
 scripts/daemon-start.sh
 scripts/daemon-start.sh --id alice
 
-# ステータス確認
+# Check status
 scripts/daemon-status.sh
 scripts/daemon-status.sh --id alice
 
-# 停止
+# Stop
 scripts/daemon-stop.sh
 scripts/daemon-stop.sh --id alice
 ```
 
-#### コマンド送信
+#### Sending commands
 
 ```bash
 scripts/daemon-post.sh [--id <id>] <action> [key=value ...]
 ```
 
-#### Daemon モードでの接続手順
+#### Connection steps in daemon mode
 
 ```bash
-# 1. Alice: listen を開始
+# 1. Alice: Start listening
 scripts/daemon-post.sh --id alice listen port=8080
 
-# 2. Alice: ステータスからオファー情報を取得し、Bob に送る
+# 2. Alice: Retrieve offer info from status and send to Bob
 scripts/daemon-status.sh --id alice
 
-# 3. Bob: forward を開始
+# 3. Bob: Start forwarding
 scripts/daemon-post.sh --id bob forward host=localhost port=3000
 
-# 4. Bob: Alice のオファー情報をセット
-scripts/daemon-post.sh --id bob set-remote-offer encoded="<Alice のオファー情報>"
+# 4. Bob: Set Alice's offer info
+scripts/daemon-post.sh --id bob set-remote-offer encoded="<Alice's offer info>"
 
-# 5. Bob: ステータスからアンサー情報を取得し、Alice に送る
+# 5. Bob: Retrieve answer info from status and send to Alice
 scripts/daemon-status.sh --id bob
 
-# 6. Alice: Bob のアンサー情報をセット
-scripts/daemon-post.sh --id alice set-remote-answer encoded="<Bob のアンサー情報>"
+# 6. Alice: Set Bob's answer info
+scripts/daemon-post.sh --id alice set-remote-answer encoded="<Bob's answer info>"
 
-# 7. 接続完了 — close で切断
+# 7. Connection established — use close to disconnect
 scripts/daemon-post.sh --id alice close
 ```
