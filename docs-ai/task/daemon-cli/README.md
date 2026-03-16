@@ -70,13 +70,65 @@ this.peer.onClosed(() => {
 
 ---
 
-## 正常動作が確認された機能
+### 問題 3: `daemon-start.sh` が `npx ts-node --esm` でもモジュール解決に失敗する
 
-- TypeScript コンパイル (`tsc -p tsconfig.server.json --noEmit`): OK
-- テスト (`npm test`): 5 suites, 19 tests, 全て PASS
-- `scripts/daemon-start.sh` (修正後): OK
-- `scripts/daemon-status.sh`: OK
+**状態**: 修正済み
+
+**症状**: 問題 1 の修正で `npx ts-node --esm --project tsconfig.server.json` に変更されたが、依然として `.mts` ESM のモジュール解決に失敗する。
+
+**修正**: `node --loader ts-node/esm src/daemon.mts` に変更した。
+
+---
+
+### 問題 4: `createOffer` / `acceptOffer` で SDP が空になるレースコンディション
+
+**状態**: 修正済み
+
+**症状**: `listen` コマンド成功後、`offer-ready` イベントの SDP が空文字列（0バイト）。
+`set-remote-offer` が `"Signaling data.sdp is required"` でエラーになる。
+
+**原因**: `createOffer()` 内で `createDataChannel()` を呼んだ後に `waitForLocalDescription()` でイベントハンドラを登録していた。
+`node-datachannel` が `createDataChannel()` 呼び出し時に `onLocalDescription` を同期的に発火する環境では、ハンドラ登録前にイベントが失われ、SDP が空のまま `gatheringStateChange: complete` で resolve される。
+
+**該当コード**: `src/app/transport/datachannel.mts`
+
+```typescript
+// 修正前: ハンドラ登録が createDataChannel の後
+async createOffer(): Promise<SignalingData> {
+  this.createPeer();
+  this.dc = this.peer.createDataChannel('tunnel');  // ← ここで onLocalDescription が発火
+  this.bindDataChannel(this.dc);
+  return this.waitForLocalDescription('offer');      // ← ハンドラ登録が遅い
+}
+```
+
+**修正**: `waitForLocalDescription()` を先に呼び出してイベントハンドラを登録してから `createDataChannel()` / `setRemoteDescription()` を実行するようにした。`acceptOffer()` にも同様の修正を適用。
+
+```typescript
+// 修正後
+async createOffer(): Promise<SignalingData> {
+  this.createPeer();
+  const promise = this.waitForLocalDescription('offer');  // ← 先にハンドラ登録
+  this.dc = this.peer.createDataChannel('tunnel');
+  this.bindDataChannel(this.dc);
+  return promise;
+}
+```
+
+---
+
+## 正常動作が確認された機能 (2026-03-16 再確認)
+
+- テスト (`npm test`): 5 suites, 23 tests, 全て PASS
+- `scripts/daemon-start.sh`: OK
+- `scripts/daemon-status.sh`: OK (state=idle 確認)
+- `scripts/daemon-post.sh listen`: OK (offer-ready イベントで SDP 非空)
+- `scripts/daemon-post.sh forward`: OK
+- `scripts/daemon-post.sh set-remote-offer`: OK (answer-ready イベントで SDP 非空)
+- `scripts/daemon-post.sh set-remote-answer`: OK
+- P2P 接続確立 (connected): OK
 - `scripts/daemon-post.sh close`: OK
 - `scripts/daemon-stop.sh`: OK
 - `--id` オプションによる複数 daemon 起動: OK
 - 同一 ID の多重起動防止: OK
+- `scripts/daemon-smoke-test.sh`: 全12ステップ PASS
