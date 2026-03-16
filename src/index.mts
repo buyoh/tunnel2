@@ -1,6 +1,6 @@
-import { TunnelApp } from './app.mjs';
-import { runCli } from './cli.mjs';
-import { DataChannelTransport } from './transport/datachannel.mjs';
+import { TunnelApp } from './app/app.mjs';
+import { runCli } from './app/cli.mjs';
+import { DataChannelTransport } from './app/transport/datachannel.mjs';
 
 async function main(): Promise<void> {
   const app = new TunnelApp(new DataChannelTransport());
