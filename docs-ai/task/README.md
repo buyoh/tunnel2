@@ -4,4 +4,4 @@
 
 ## Index
 
-(現在タスクなし)
+- [daemon-cli/](daemon-cli/README.md) — Agent 向け daemon + POST 形式 CLI
