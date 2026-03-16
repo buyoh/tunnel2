@@ -33,7 +33,7 @@ fi
 rm -f "$SOCK_FILE"
 
 # daemon 起動
-npx ts-node src/daemon.mts --id "$DAEMON_ID" >> "$LOG_FILE" 2>&1 &
+npx ts-node --esm --project tsconfig.server.json src/daemon.mts --id "$DAEMON_ID" >> "$LOG_FILE" 2>&1 &
 daemon_pid=$!
 
 # ソケット出現を待つ

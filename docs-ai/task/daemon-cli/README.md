@@ -25,7 +25,7 @@ Error: Cannot find module '.../src/app/transport/datachannel.mjs'
 
 **原因**: `daemon-start.sh` が `npx ts-node src/daemon.mts` を使用していたが、ts-node v10 は `.mts` ファイル内の `.mjs` 拡張子による相対インポートを正しく解決できない。Jest では `moduleNameMapper` で `.mjs` → `.mts` のマッピングを行っているが、ts-node にはこの仕組みがない。
 
-**修正**: `node --loader ts-node/esm src/daemon.mts` に変更した。
+**修正**: `npx ts-node --esm --project tsconfig.server.json src/daemon.mts` に変更した。`--esm` で ESM ローダーを有効にし、`--project` で `tsconfig.server.json` を明示的に読み込む。
 
 ---
 
