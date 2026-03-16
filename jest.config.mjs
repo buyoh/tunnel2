@@ -9,5 +9,5 @@ export default {
   transform: {
     '^.+\\.mts$': ['ts-jest', { useESM: true }],
   },
-  testMatch: ['<rootDir>/src/**/*.test.mts'],
+  testMatch: ['<rootDir>/src/**/*.spec.mts'],
 };

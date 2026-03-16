@@ -9,20 +9,20 @@
 
 - **フレームワーク**: Jest + ts-jest (インストール済み)
 - **テスト分類**: Unit テスト (P2P・ネットワーク接続なし)
-- **配置**: `src/` と同階層にテストファイルを配置 (`*.test.mts`)
+- **配置**: `src/` と同階層にテストファイルを配置 (`*.spec.mts`)
 
 ### テストファイル構成
 
 ```
 src/
 ├── signaling.mts
-├── signaling.test.mts         # signaling のテスト
+├── signaling.spec.mts         # signaling のテスト
 ├── protocol.mts
-├── protocol.test.mts          # protocol のテスト
+├── protocol.spec.mts          # protocol のテスト
 ├── app.mts
-├── app.test.mts               # TunnelApp のテスト
+├── app.spec.mts               # TunnelApp のテスト
 ├── tunnel.mts
-├── tunnel.test.mts            # TunnelListener / TunnelForwarder のテスト
+├── tunnel.spec.mts            # TunnelListener / TunnelForwarder のテスト
 └── transport/
     ├── interface.mts
     └── mock.mts               # テスト用モック実装
@@ -325,6 +325,6 @@ export default {
   transform: {
     '^.+\\.mts$': ['ts-jest', { useESM: true }],
   },
-  testMatch: ['**/*.test.mts'],
+  testMatch: ['**/*.spec.mts'],
 };
 ```

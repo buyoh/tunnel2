@@ -1,0 +1,29 @@
+name: test
+
+on: [push]
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        node: [20]
+
+    runs-on: ubuntu-24.04
+    
+    steps:
+    - uses: actions/setup-node@v6
+      with:
+        node-version: ${{ matrix.node }}
+    - uses: actions/checkout@v2
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+    - name: get git submodules
+      run: |
+        git submodule init
+        git submodule update
+    - name: install packages
+      run: |
+        npm ci
+    - name: run tests
+      run: |
+        npm run test
