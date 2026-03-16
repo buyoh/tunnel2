@@ -2,7 +2,10 @@
 
 ## 概要
 
-node-datachannel (WebRTC DataChannel) を利用して、NAT越えの P2P TCP トンネルを実現する CLI アプリケーション。
+P2P 通信を利用して NAT 越えの TCP トンネルを実現する CLI アプリケーション。
+
+P2P トランスポート層はインターフェースで抽象化し、具体的な実装 (node-datachannel 等) に直接依存しない設計とする。
+アプリケーションロジックは `TunnelApp` クラスに集約し、CLI / Web UI / GUI など複数のフロントエンドから操作可能なアーキテクチャを採用する。
 
 シグナリングサーバーを使わず、SDP/ICE 情報をユーザーがコピー&ペーストで交換するインタラクティブ方式を採用する。
 
@@ -10,11 +13,12 @@ node-datachannel (WebRTC DataChannel) を利用して、NAT越えの P2P TCP ト
 
 | ファイル | 内容 |
 |---|---|
-| [01-overview.md](./01-overview.md) | 全体アーキテクチャ・システム構成 |
+| [01-overview.md](./01-overview.md) | 全体アーキテクチャ・レイヤー構成 |
 | [02-signaling.md](./02-signaling.md) | シグナリング (SDP/ICE 交換) の設計 |
-| [03-connection.md](./03-connection.md) | P2P 接続管理の設計 |
-| [04-tunnel.md](./04-tunnel.md) | TCP トンネル (TCP ↔ DataChannel ブリッジ) の設計 |
-| [05-cli.md](./05-cli.md) | CLI インターフェースの設計 |
+| [03-transport.md](./03-transport.md) | P2P トランスポート抽象化層の設計 |
+| [04-app.md](./04-app.md) | TunnelApp クラス (アプリケーションコア) の設計 |
+| [05-tunnel.md](./05-tunnel.md) | TCP トンネル (TCP ↔ P2P ブリッジ) の設計 |
+| [06-cli.md](./06-cli.md) | CLI インターフェースの設計 |
 
 ## ステータス
 

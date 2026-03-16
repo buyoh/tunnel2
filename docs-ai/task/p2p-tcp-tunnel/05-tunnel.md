@@ -1,18 +1,20 @@
-# 04. TCP トンネル設計
+# 05. TCP トンネル設計
 
 ## 概要
 
-TCP ソケットと DataChannel を双方向にブリッジするモジュール。
-1つの DataChannel 上で複数の TCP 接続を多重化する。
+TCP ソケットと P2P トランスポートを双方向にブリッジするモジュール。
+1つの P2P チャネル上で複数の TCP 接続を多重化する。
+
+`IP2PTransport` インターフェース経由で P2P チャネルとやり取りするため、node-datachannel に直接依存しない。
 
 ## ファイル構成
 
-- `src/protocol.mts` — DataChannel 上の多重化プロトコル定義
-- `src/tunnel.mts` — TCP サーバー/クライアントと DataChannel のブリッジ
+- `src/protocol.mts` — P2P チャネル上の多重化プロトコル定義
+- `src/tunnel.mts` — TCP サーバー/クライアントと P2P チャネルのブリッジ
 
 ## 多重化プロトコル (`src/protocol.mts`)
 
-1つの DataChannel で複数の TCP 接続を扱うため、メッセージにヘッダを付与する。
+1つの P2P チャネルで複数の TCP 接続を扱うため、メッセージにヘッダを付与する。
 
 ### メッセージフォーマット
 
@@ -77,11 +79,15 @@ export function decodeMessage(data: Buffer): ProtocolMessage {
 
 ## TCP トンネル (`src/tunnel.mts`)
 
+`IP2PTransport` を受け取り、TCP ソケットとの間でデータをブリッジする。
+
 ### Listen 側 (Peer A)
 
-ローカルポートで TCP 接続を待ち受け、DataChannel 経由で相手ピアに転送する。
+ローカルポートで TCP 接続を待ち受け、P2P チャネル経由で相手ピアに転送する。
 
 ```typescript
+import { IP2PTransport } from './transport/interface.mjs';
+
 export class TunnelListener {
   private server: net.Server;
   private connections: Map<number, net.Socket>;
@@ -89,7 +95,7 @@ export class TunnelListener {
 
   constructor(
     private listenPort: number,
-    private dc: DataChannel,
+    private transport: IP2PTransport,
   );
 
   // TCP サーバーを起動
@@ -98,7 +104,7 @@ export class TunnelListener {
   // 全接続を閉じてサーバーを停止
   stop(): void;
 
-  // DataChannel からのメッセージを処理
+  // P2P チャネルからのメッセージを処理
   handleMessage(msg: ProtocolMessage): void;
 }
 ```
@@ -109,33 +115,35 @@ export class TunnelListener {
 2. 新規 TCP 接続時:
    - `connId` を割り当て (インクリメンタル)
    - `connections` Map に登録
-   - DataChannel に `CONNECT` メッセージを送信
+   - P2P チャネルに `CONNECT` メッセージを送信
 3. TCP データ受信時:
-   - `DATA` メッセージとして DataChannel に送信
+   - `DATA` メッセージとして P2P チャネルに送信
 4. TCP 切断時:
    - `CLOSE` メッセージを送信
    - Map から削除
-5. DataChannel から `DATA` 受信時:
+5. P2P チャネルから `DATA` 受信時:
    - connId に対応する TCP ソケットにデータを書き込み
-6. DataChannel から `CLOSE` 受信時:
+6. P2P チャネルから `CLOSE` 受信時:
    - connId に対応する TCP ソケットを破棄
    - Map から削除
 
 ### Forward 側 (Peer B)
 
-DataChannel から受信した接続要求に対し、指定先への TCP 接続を確立する。
+P2P チャネルから受信した接続要求に対し、指定先への TCP 接続を確立する。
 
 ```typescript
+import { IP2PTransport } from './transport/interface.mjs';
+
 export class TunnelForwarder {
   private connections: Map<number, net.Socket>;
 
   constructor(
     private forwardHost: string,
     private forwardPort: number,
-    private dc: DataChannel,
+    private transport: IP2PTransport,
   );
 
-  // DataChannel からのメッセージを処理
+  // P2P チャネルからのメッセージを処理
   handleMessage(msg: ProtocolMessage): void;
 
   // 全接続を閉じる
@@ -152,19 +160,19 @@ export class TunnelForwarder {
 2. `DATA` メッセージ受信時:
    - connId に対応する TCP ソケットにデータを書き込み
 3. TCP データ受信時:
-   - `DATA` メッセージとして DataChannel に送信
+   - `DATA` メッセージとして P2P チャネルに送信
 4. `CLOSE` メッセージ受信時:
    - connId に対応する TCP ソケットを破棄
 5. TCP 切断時:
-   - `CLOSE` メッセージを DataChannel に送信
+   - `CLOSE` メッセージを P2P チャネルに送信
 
 ## フロー制御
 
-DataChannel の `bufferedAmount` を監視し、バッファが溢れないようにする。
+`IP2PTransport` の `bufferedAmount()` を監視し、バッファが溢れないようにする。
 
-- `dc.bufferedAmount()` が閾値 (例: 1MB) を超えた場合、TCP ソケットの `pause()` を呼んで読み取りを停止
-- `dc.onBufferedAmountLow()` コールバックで TCP ソケットの `resume()` を呼んで読み取り再開
-- `dc.setBufferedAmountLowThreshold()` で閾値を設定 (例: 256KB)
+- `transport.bufferedAmount()` が閾値 (例: 1MB) を超えた場合、TCP ソケットの `pause()` を呼んで読み取りを停止
+- `transport.onBufferedAmountLow` コールバックで TCP ソケットの `resume()` を呼んで読み取り再開
+- `transport.setBufferedAmountLowThreshold()` で閾値を設定 (例: 256KB)
 
 ```typescript
 const HIGH_WATER_MARK = 1 * 1024 * 1024;   // 1MB
@@ -175,4 +183,4 @@ const LOW_WATER_MARK  = 256 * 1024;         // 256KB
 
 - TCP ソケットエラー → `CLOSE` メッセージ送信 + ソケットクリーンアップ
 - `CONNECT_ERR` 受信 → 対応する TCP ソケットを破棄
-- DataChannel 切断 → 全 TCP 接続を閉じる
+- P2P チャネル切断 → 全 TCP 接続を閉じる
