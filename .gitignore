@@ -29,6 +29,9 @@ build/
 .DS_Store
 Thumbs.db
 
+# Runtime data
+.var/
+
 # TypeScript
 *.tsbuildinfo
 
