@@ -4,9 +4,21 @@ import { DataChannelTransport } from './app/transport/datachannel.mjs';
 import { TunnelApp } from './app/app.mjs';
 import { DaemonServer } from './app/daemon-server.mjs';
 
+/** --id <id> を process.argv からパースする。省略時は "default" */
+function parseDaemonId(argv: string[]): string {
+  const idx = argv.indexOf('--id');
+  const id = idx !== -1 && idx + 1 < argv.length ? argv[idx + 1] : 'default';
+  if (!/^[a-zA-Z0-9_-]+$/.test(id)) {
+    throw new Error(`Invalid daemon id: ${id} (alphanumeric, hyphen, underscore only)`);
+  }
+  return id;
+}
+
+const DAEMON_ID = parseDaemonId(process.argv);
+
 const VAR_DIR = '.var';
-const PID_FILE = path.join(VAR_DIR, 'daemon.pid');
-const SOCK_FILE = path.join(VAR_DIR, 'daemon.sock');
+const PID_FILE = path.join(VAR_DIR, `daemon-${DAEMON_ID}.pid`);
+const SOCK_FILE = path.join(VAR_DIR, `daemon-${DAEMON_ID}.sock`);
 
 async function main(): Promise<void> {
   // .var/ ディレクトリがなければ作成する
@@ -26,7 +38,7 @@ async function main(): Promise<void> {
   // PID ファイルを書き込む
   fs.writeFileSync(PID_FILE, String(process.pid), 'utf-8');
 
-  console.log(`Daemon started (pid=${process.pid}, socket=${SOCK_FILE})`);
+  console.log(`Daemon started (id=${DAEMON_ID}, pid=${process.pid}, socket=${SOCK_FILE})`);
 
   const shutdown = async (): Promise<void> => {
     console.log('Shutting down daemon...');

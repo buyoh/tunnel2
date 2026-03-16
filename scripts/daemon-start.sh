@@ -2,10 +2,21 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
+# --id <id> オプションのパース (省略時は "default")
+DAEMON_ID="default"
+if [[ "${1:-}" == "--id" ]]; then
+  DAEMON_ID="${2:?'--id requires a value'}"
+  shift 2
+fi
+if [[ ! "$DAEMON_ID" =~ ^[a-zA-Z0-9_-]+$ ]]; then
+  echo "Invalid daemon id: $DAEMON_ID" >&2
+  exit 1
+fi
+
 VAR_DIR=".var"
-PID_FILE="$VAR_DIR/daemon.pid"
-SOCK_FILE="$VAR_DIR/daemon.sock"
-LOG_FILE="$VAR_DIR/daemon.log"
+PID_FILE="$VAR_DIR/daemon-${DAEMON_ID}.pid"
+SOCK_FILE="$VAR_DIR/daemon-${DAEMON_ID}.sock"
+LOG_FILE="$VAR_DIR/daemon-${DAEMON_ID}.log"
 
 mkdir -p "$VAR_DIR"
 
@@ -22,7 +33,7 @@ fi
 rm -f "$SOCK_FILE"
 
 # daemon 起動
-npx ts-node src/daemon.mts >> "$LOG_FILE" 2>&1 &
+npx ts-node src/daemon.mts --id "$DAEMON_ID" >> "$LOG_FILE" 2>&1 &
 daemon_pid=$!
 
 # ソケット出現を待つ
