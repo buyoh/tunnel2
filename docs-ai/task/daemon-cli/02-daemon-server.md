@@ -45,25 +45,26 @@ interface LastCommand {
 
 ### リクエストハンドラ
 
-Node.js 標準の `http.createServer` を使用。フレームワークは使わない。
+Express を使用する。`express.json()` ミドルウェアでリクエストボディを自動パースする。
 
 #### ルーティング
 
 ```typescript
-// パスとメソッドで分岐
-if (req.method === 'GET' && req.url === '/status') {
+const app = express();
+app.use(express.json());
+
+app.get('/api/status', (req, res) => {
   handleStatus(req, res);
-} else if (req.method === 'POST' && req.url === '/command') {
-  handleCommand(req, res);
-} else {
-  res.writeHead(404);
-  res.end(JSON.stringify({ error: 'Not Found' }));
-}
+});
+
+app.post('/api/command', async (req, res) => {
+  await handleCommand(req, res);
+});
 ```
 
 #### `handleCommand`
 
-1. リクエストボディを読み取り JSON パース
+1. `req.body` から `action` と `args` を取得（Express の `json()` ミドルウェアでパース済み）
 2. `action` に応じて `TunnelApp` のメソッドを呼び出す
 3. 成功: `200 { ok: true }` を返す
 4. 失敗: `400 { ok: false, error: "..." }` を返す

@@ -147,7 +147,7 @@ daemon のステータスを確認する。
    - 存在しない → `echo "Daemon is not running"` して exit 1
 2. `kill -0 <pid>` でプロセス生存確認
    - 死んでいる → `echo "Daemon is not running (stale pid file)"` して exit 1
-3. `curl --unix-socket .var/daemon.sock http://localhost/status` でステータス取得
+3. `curl --unix-socket .var/daemon.sock http://localhost/api/status` でステータス取得
 4. JSON を出力して exit 0
 
 ```bash
@@ -171,7 +171,7 @@ if ! kill -0 "$pid" 2>/dev/null; then
   exit 1
 fi
 
-curl -s --unix-socket "$SOCK_FILE" http://localhost/status
+curl -s --unix-socket "$SOCK_FILE" http://localhost/api/status
 echo  # 改行
 ```
 
@@ -203,7 +203,7 @@ scripts/daemon-post.sh close
 2. 残りの引数を `key=value` としてパースし `args` オブジェクトを構築
    - 値が整数文字列なら number に変換する
 3. JSON ペイロードを構築: `{ "action": "<action>", "args": { ... } }`
-4. `curl --unix-socket .var/daemon.sock -X POST -H "Content-Type: application/json" -d '<json>' http://localhost/command`
+4. `curl --unix-socket .var/daemon.sock -X POST -H "Content-Type: application/json" -d '<json>' http://localhost/api/command`
 5. レスポンスの `ok` フィールドに基づき終了コードを設定
    - `ok: true` → exit 0
    - `ok: false` → exit 1
@@ -256,7 +256,7 @@ response=$(curl -s --unix-socket "$SOCK_FILE" \
   -X POST \
   -H "Content-Type: application/json" \
   -d "$json" \
-  http://localhost/command)
+  http://localhost/api/command)
 
 echo "$response"
 

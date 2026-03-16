@@ -36,15 +36,15 @@ src/
 
 ## IPC プロトコル
 
-Node.js 標準の `http` モジュールを使い、Unix domain socket (`.var/daemon.sock`) 上で HTTP を提供する。
+Express を使い、Unix domain socket (`.var/daemon.sock`) 上で HTTP を提供する。
 bash スクリプトからは `curl --unix-socket` で通信する。
 
 ### エンドポイント
 
-#### `POST /command`
+#### `POST /api/command`
 
 daemon にコマンドを送信する。コマンドが **受理されたかどうか** を返す。
-コマンドの実行結果（例: offer-ready イベント）は `/status` で別途確認する。
+コマンドの実行結果（例: offer-ready イベント）は `/api/status` で別途確認する。
 
 リクエスト:
 
@@ -88,7 +88,7 @@ HTTP ステータスコード:
 - `400` — コマンド拒否（不正な引数、状態不整合など）
 - `404` — 不明なエンドポイント
 
-#### `GET /status`
+#### `GET /api/status`
 
 daemon の現在のステータスを返す。
 
