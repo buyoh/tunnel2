@@ -10,6 +10,7 @@
   },
   "scripts": {
     "start": "ts-node --esm --project tsconfig.server.json src/index.mts",
+    "daemon": "node --loader ts-node/esm src/daemon.mts",
     "test": "NODE_OPTIONS=--experimental-vm-modules jest --runInBand"
   },
   "dependencies": {
