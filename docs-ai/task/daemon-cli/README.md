@@ -7,7 +7,8 @@
 ## 設計ドキュメント
 
 - [../../done-task/daemon-cli/01-fix-onclosed.md](../../done-task/daemon-cli/01-fix-onclosed.md) — 問題 2 の修正方針（`onClosed` → `onStateChange` への置き換え、完了済み）
-- [02-test-api-compat.md](02-test-api-compat.md) — API 互換性を検出する large テストの設計
+- [../../done-task/daemon-cli/02-test-api-compat.md](../../done-task/daemon-cli/02-test-api-compat.md) — API 互換性を検出する large テストの設計（完了済み）
+- [03-test-createoffer-failure.md](03-test-createoffer-failure.md) — large テスト `createOffer` が失敗する問題の調査
 
 ## 問題一覧
 

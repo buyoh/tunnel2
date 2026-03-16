@@ -242,3 +242,70 @@ describe('DataChannelTransport', () => {
     });
   });
 });
+
+describe('DataChannelTransport (large)', () => {
+  it('createOffer が API エラーなく PeerConnection を生成できる', async () => {
+    const transport = new DataChannelTransport();
+    transport.setEvents({
+      onOpen: () => {},
+      onMessage: () => {},
+      onClosed: () => {},
+      onStateChange: () => {},
+      onBufferedAmountLow: () => {},
+    });
+
+    // createOffer は createPeer を同期的に呼ぶ
+    // ICE gathering のタイムアウト(30秒)は待たず、5秒以内に
+    // API エラーでリジェクトされないことを確認
+    await expect(
+      Promise.race([
+        transport.createOffer(),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('timeout (expected)')), 5000)
+        ),
+      ])
+    ).rejects.toThrow('timeout (expected)');
+
+    transport.close();
+  }, 10000);
+
+  it('acceptOffer が API エラーなく PeerConnection を生成できる', async () => {
+    const transport = new DataChannelTransport();
+    transport.setEvents({
+      onOpen: () => {},
+      onMessage: () => {},
+      onClosed: () => {},
+      onStateChange: () => {},
+      onBufferedAmountLow: () => {},
+    });
+
+    const dummyOffer = { sdp: 'v=0\r\n', type: 'offer' as const, candidates: [] };
+
+    // acceptOffer も createPeer を呼ぶ
+    // SDP が不正でも createPeer 段階の API エラーは即座に発生する
+    try {
+      await Promise.race([
+        transport.acceptOffer(dummyOffer),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('timeout (expected)')), 5000)
+        ),
+      ]);
+    } catch (e) {
+      // タイムアウトまたは SDP パースエラーは許容
+      // "is not a function" 系のエラーは不可
+      expect((e as Error).message).not.toMatch(/is not a function/);
+    }
+
+    transport.close();
+  }, 10000);
+
+  it('close が未接続状態でもエラーなく呼べる', () => {
+    const transport = new DataChannelTransport();
+    expect(() => transport.close()).not.toThrow();
+  });
+
+  it('sendMessage が dc=null のとき false を返す', () => {
+    const transport = new DataChannelTransport();
+    expect(transport.sendMessage(Buffer.from('test'))).toBe(false);
+  });
+});
