@@ -28,15 +28,15 @@ src/
   app/
     daemon-server.mts  # HTTP サーバ + コマンドハンドラ
 
-.var/                  # ランタイムデータ (.gitignore 対象)
-  daemon.pid           # プロセス ID
-  daemon.sock          # Unix domain socket
-  daemon.log           # 標準出力・エラーのログ
+.var/                        # ランタイムデータ (.gitignore 対象)
+  daemon-{id}.pid            # プロセス ID（ID 別）
+  daemon-{id}.sock           # Unix domain socket（ID 別）
+  daemon-{id}.log            # 標準出力・エラーのログ（ID 別）
 ```
 
 ## IPC プロトコル
 
-Express を使い、Unix domain socket (`.var/daemon.sock`) 上で HTTP を提供する。
+Express を使い、Unix domain socket (`.var/daemon-{id}.sock`) 上で HTTP を提供する。
 bash スクリプトからは `curl --unix-socket` で通信する。
 
 ### エンドポイント
@@ -129,12 +129,20 @@ daemon の現在のステータスを返す。
 
 - `.gitignore` に `.var/` を追加する
 - daemon 起動時に `.var/` ディレクトリがなければ作成する
-- daemon 停止時に `.var/daemon.sock` と `.var/daemon.pid` を削除する
-- `.var/daemon.log` は削除せず残す（デバッグ用）
+- daemon 停止時に `.var/daemon-{id}.sock` と `.var/daemon-{id}.pid` を削除する
+- `.var/daemon-{id}.log` は削除せず残す（デバッグ用）
 
-## 多重起動防止
+## ID による多重起動
 
-1. `daemon-start.sh` は `.var/daemon.pid` の存在を確認
+すべてのスクリプトと `daemon.mts` は `--id <id>` オプションを受け付ける（省略時は `default`）。
+ID によりファイルパスが分離されるため、異なる ID であれば同一環境で複数 daemon を同時に起動できる。
+
+- ID は英数字・ハイフン・アンダースコアのみ許可（パストラバーサル防止）
+- ファイルパス: `.var/daemon-{id}.pid`, `.var/daemon-{id}.sock`, `.var/daemon-{id}.log`
+
+### 同一 ID の多重起動防止
+
+1. `daemon-start.sh` は `.var/daemon-{id}.pid` の存在を確認
 2. PID ファイルが存在する場合、`kill -0 <pid>` でプロセスの生存を確認
 3. プロセスが生存中ならエラー終了
 4. プロセスが死んでいれば stale な PID ファイルとして削除し、新たに起動
@@ -146,5 +154,5 @@ daemon プロセスは以下のシグナルを処理する:
 - `SIGTERM` / `SIGINT` — graceful shutdown
   - `TunnelApp.close()` を呼び出し
   - HTTP サーバを close
-  - `.var/daemon.pid` と `.var/daemon.sock` を削除
+  - `.var/daemon-{id}.pid` と `.var/daemon-{id}.sock` を削除
   - `process.exit(0)`
