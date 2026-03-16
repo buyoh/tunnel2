@@ -9,8 +9,8 @@
     "node": ">=20.0.0"
   },
   "scripts": {
-    "start": "ts-node --esm --project tsconfig.server.json src/index.mts",
-    "daemon": "node --loader ts-node/esm src/daemon.mts",
+    "start": "node --import ./register.mjs src/index.mts",
+    "daemon": "node --import ./register.mjs src/daemon.mts",
     "test": "NODE_OPTIONS=--experimental-vm-modules jest --runInBand"
   },
   "dependencies": {
