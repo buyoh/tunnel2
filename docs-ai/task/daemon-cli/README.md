@@ -6,7 +6,7 @@
 
 ## 設計ドキュメント
 
-- [01-fix-onclosed.md](01-fix-onclosed.md) — 問題 2 の修正方針（`onClosed` → `onStateChange` への置き換え）
+- [../../done-task/daemon-cli/01-fix-onclosed.md](../../done-task/daemon-cli/01-fix-onclosed.md) — 問題 2 の修正方針（`onClosed` → `onStateChange` への置き換え、完了済み）
 - [02-test-api-compat.md](02-test-api-compat.md) — API 互換性を検出する large テストの設計
 
 ## 問題一覧
@@ -31,7 +31,7 @@ Error: Cannot find module '.../src/app/transport/datachannel.mjs'
 
 ### 問題 2: `node-datachannel` v0.32.1 に `PeerConnection.onClosed` が存在しない
 
-**状態**: 未修正
+**状態**: 修正済み
 
 **症状**: `listen` コマンドを実行すると以下のエラーが返る。
 
@@ -61,14 +61,18 @@ this.peer.onClosed(() => {
 
 **影響**: `listen` / `forward` など、P2P 接続を確立するコマンドがすべて失敗する。daemon の起動自体や `close` / `status` コマンドは正常に動作する。
 
-**修正案**: `onClosed` の呼び出しを削除するか、`onStateChange` コールバック内で `closed` 状態を検出して `onClosed` イベントを発火する。
+**修正**:
+- `src/app/transport/datachannel.mts` の `PeerConnection.onClosed` 呼び出しを削除
+- `onStateChange` で `closed` / `failed` を検出して `events.onClosed()` を発火
+- `bindDataChannel()` の `dc.onClosed` を `typeof` で防御
+- `src/app/transport/datachannel.spec.mts` を追加し、回帰テストを実装
 
 ---
 
 ## 正常動作が確認された機能
 
 - TypeScript コンパイル (`tsc -p tsconfig.server.json --noEmit`): OK
-- テスト (`npm test`): 4 suites, 16 tests, 全て PASS
+- テスト (`npm test`): 5 suites, 19 tests, 全て PASS
 - `scripts/daemon-start.sh` (修正後): OK
 - `scripts/daemon-status.sh`: OK
 - `scripts/daemon-post.sh close`: OK

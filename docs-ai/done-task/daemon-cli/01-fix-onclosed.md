@@ -68,3 +68,11 @@ if (typeof dc.onClosed === 'function') {
 ## 注意点
 
 - `onClosed` が `onStateChange('closed')` と `dc.onClosed()` の両方から発火される可能性がある。`TunnelApp` の `onClosed` ハンドラは `state === 'closed'` ガードがあるため二重実行は防がれる。
+
+## 進捗
+
+- [x] `src/app/transport/datachannel.mts` の `PeerConnection.onClosed` 呼び出しを削除
+- [x] `onStateChange` の `closed` / `failed` 検出で `events.onClosed()` を発火
+- [x] `bindDataChannel()` の `dc.onClosed` に `typeof` チェックを追加
+- [x] `src/app/transport/datachannel.spec.mts` を追加して回帰テストを実装
+- [x] `npm test` 実行: 5 suites, 19 tests, 全て PASS

@@ -4,6 +4,9 @@ import { IP2PTransport, P2PTransportEvents } from './interface.mjs';
 
 interface DataChannelTransportConfig {
   iceServers?: string[];
+  nodeDataChannelModule?: {
+    PeerConnection: new (label: string, config: { iceServers: string[] }) => any;
+  };
 }
 
 const DEFAULT_ICE_SERVERS = ['stun:stun.l.google.com:19302'];
@@ -14,6 +17,9 @@ const DEFAULT_ICE_SERVERS = ['stun:stun.l.google.com:19302'];
  */
 export class DataChannelTransport implements IP2PTransport {
   private readonly config: DataChannelTransportConfig;
+  private readonly nodeDataChannelModule: {
+    PeerConnection: new (label: string, config: { iceServers: string[] }) => any;
+  };
   private events: P2PTransportEvents | null = null;
   private peer: any = null;
   private dc: any = null;
@@ -22,6 +28,7 @@ export class DataChannelTransport implements IP2PTransport {
     this.config = {
       iceServers: config.iceServers ?? DEFAULT_ICE_SERVERS,
     };
+    this.nodeDataChannelModule = config.nodeDataChannelModule ?? (nodeDataChannel as any);
   }
 
   setEvents(events: P2PTransportEvents): void {
@@ -99,7 +106,7 @@ export class DataChannelTransport implements IP2PTransport {
   }
 
   private createPeer(): void {
-    const ndc = nodeDataChannel as any;
+    const ndc = this.nodeDataChannelModule as any;
     if (!ndc || typeof ndc.PeerConnection !== 'function') {
       throw new Error('node-datachannel is not available');
     }
@@ -108,9 +115,11 @@ export class DataChannelTransport implements IP2PTransport {
     });
     this.peer.onStateChange((state: string) => {
       this.events?.onStateChange(state as any);
-    });
-    this.peer.onClosed(() => {
-      this.events?.onClosed();
+      // node-datachannel v0.32.1 には PeerConnection.onClosed がないため、
+      // state change の closed / failed を接続終了として扱う。
+      if (state === 'closed' || state === 'failed') {
+        this.events?.onClosed();
+      }
     });
   }
 
@@ -122,9 +131,11 @@ export class DataChannelTransport implements IP2PTransport {
       const data = Buffer.isBuffer(message) ? message : Buffer.from(message);
       this.events?.onMessage(data);
     });
-    dc.onClosed(() => {
-      this.events?.onClosed();
-    });
+    if (typeof dc.onClosed === 'function') {
+      dc.onClosed(() => {
+        this.events?.onClosed();
+      });
+    }
     if (typeof dc.onBufferedAmountLow === 'function') {
       dc.onBufferedAmountLow(() => {
         this.events?.onBufferedAmountLow();
