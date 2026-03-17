@@ -1,5 +1,5 @@
 import readline from 'node:readline/promises';
-import { TunnelApp } from './app.mjs';
+import { TunnelApp } from './tunnel-app.mjs';
 
 export async function runCli(app: TunnelApp, args: string[]): Promise<void> {
   const command = args[0];

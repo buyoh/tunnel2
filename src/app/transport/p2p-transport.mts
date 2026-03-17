@@ -1,4 +1,4 @@
-import { SignalingData } from '../signaling.mjs';
+import { SignalingData } from '../signaling-data.mjs';
 
 /** P2P データチャネルの接続状態。 */
 export type P2PChannelState = 'new' | 'connecting' | 'open' | 'closing' | 'closed';

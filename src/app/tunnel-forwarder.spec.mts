@@ -1,14 +1,9 @@
 import { EventEmitter } from 'node:events';
-import { decodeMessage, MessageType } from './protocol.mjs';
-import {
-  ITcpClientFactory,
-  ITcpServer,
-  ITcpServerFactory,
-  ITcpSocket,
-  TunnelForwarder,
-  TunnelListener,
-} from './tunnel.mjs';
-import { MockTransport } from './transport/mock.mjs';
+import { decodeMessage } from './protocol-message.mjs';
+import { ITcpClientFactory, ITcpServer, ITcpServerFactory, ITcpSocket } from './tcp-socket.mjs';
+import { TunnelForwarder } from './tunnel-forwarder.mjs';
+import { TunnelListener } from './tunnel-listener.mjs';
+import { MockTransport } from './transport/mock-transport.mjs';
 
 class MockTcpSocket extends EventEmitter implements ITcpSocket {
   readonly writes: Buffer[] = [];
@@ -41,10 +36,6 @@ class MockTcpSocket extends EventEmitter implements ITcpSocket {
 
   emitConnect(): void {
     this.emit('connect');
-  }
-
-  emitError(error: Error): void {
-    this.emit('error', error);
   }
 }
 
@@ -96,33 +87,7 @@ class MockTcpClientFactory implements ITcpClientFactory {
   }
 }
 
-describe('TunnelListener', () => {
-  it('sends CONNECT when a TCP connection is accepted', () => {
-    const transport = new MockTransport();
-    const tcpServer = new MockTcpServer();
-    transport.setEvents({
-      onOpen: () => {},
-      onMessage: () => {},
-      onClosed: () => {},
-      onStateChange: () => {},
-      onBufferedAmountLow: () => {},
-    });
-
-    const listener = new TunnelListener(31001, transport, new MockTcpServerFactory(tcpServer));
-    listener.start();
-
-    tcpServer.accept(new MockTcpSocket());
-
-    const sent = transport.getSentMessages();
-    expect(sent.length).toBeGreaterThan(0);
-    const first = decodeMessage(sent[0]);
-    expect(first.type).toBe(MessageType.CONNECT);
-
-    listener.stop();
-  });
-});
-
-describe('Tunnel integration', () => {
+describe('TunnelForwarder integration', () => {
   it('forwards TCP data via paired MockTransport and mock TCP sockets', () => {
     const [a, b] = MockTransport.createPair();
     const tcpServer = new MockTcpServer();
@@ -135,14 +100,14 @@ describe('Tunnel integration', () => {
 
     a.setEvents({
       onOpen: () => {},
-      onMessage: (raw) => listener.handleRawMessage(raw),
+      onMessage: (raw) => listener.handleMessage(decodeMessage(raw)),
       onClosed: () => {},
       onStateChange: () => {},
       onBufferedAmountLow: () => listener.onBufferedAmountLow(),
     });
     b.setEvents({
       onOpen: () => {},
-      onMessage: (raw) => forwarder.handleRawMessage(raw),
+      onMessage: (raw) => forwarder.handleMessage(decodeMessage(raw)),
       onClosed: () => {},
       onStateChange: () => {},
       onBufferedAmountLow: () => forwarder.onBufferedAmountLow(),

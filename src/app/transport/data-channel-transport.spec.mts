@@ -1,5 +1,5 @@
-import { DataChannelTransport } from './datachannel.mjs';
-import { P2PTransportEvents } from './interface.mjs';
+import { DataChannelTransport } from './data-channel-transport.mjs';
+import { P2PTransportEvents } from './p2p-transport.mjs';
 
 type DataChannelMessage = string | Buffer | ArrayBuffer;
 

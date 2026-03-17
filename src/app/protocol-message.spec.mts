@@ -1,4 +1,4 @@
-import { decodeMessage, encodeMessage, MessageType } from './protocol.mjs';
+import { decodeMessage, encodeMessage, MessageType } from './protocol-message.mjs';
 
 describe('protocol', () => {
   it('round-trips DATA messages', () => {

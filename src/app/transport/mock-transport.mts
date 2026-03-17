@@ -1,5 +1,5 @@
-import { SignalingData } from '../signaling.mjs';
-import { IP2PTransport, P2PChannelState, P2PTransportEvents } from './interface.mjs';
+import { SignalingData } from '../signaling-data.mjs';
+import { IP2PTransport, P2PChannelState, P2PTransportEvents } from './p2p-transport.mjs';
 
 /**
  * テスト用のモックトランスポート。

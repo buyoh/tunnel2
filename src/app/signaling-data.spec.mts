@@ -1,4 +1,4 @@
-import { decodeSignaling, encodeSignaling, SignalingData } from './signaling.mjs';
+import { decodeSignaling, encodeSignaling, SignalingData } from './signaling-data.mjs';
 
 describe('signaling', () => {
   it('encodes and decodes signaling data', () => {

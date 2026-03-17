@@ -1,8 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { DataChannelTransport } from './app/transport/datachannel.mjs';
-import { TunnelApp } from './app/app.mjs';
-import { DaemonController, DaemonServer } from './app/daemon-server.mjs';
+import { DataChannelTransport } from './app/transport/data-channel-transport.mjs';
+import { TunnelApp } from './app/tunnel-app.mjs';
+import { DaemonController } from './app/daemon-controller.mjs';
+import { DaemonServer } from './app/daemon-server.mjs';
 
 /** --id <id> を process.argv からパースする。省略時は "default" */
 function parseDaemonId(argv: string[]): string {

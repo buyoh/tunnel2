@@ -1,8 +1,9 @@
 import { EventEmitter } from 'node:events';
-import { decodeMessage } from './protocol.mjs';
-import { decodeSignaling, encodeSignaling } from './signaling.mjs';
-import { TunnelForwarder, TunnelListener } from './tunnel.mjs';
-import { IP2PTransport } from './transport/interface.mjs';
+import { decodeMessage } from './protocol-message.mjs';
+import { decodeSignaling, encodeSignaling } from './signaling-data.mjs';
+import { TunnelForwarder } from './tunnel-forwarder.mjs';
+import { TunnelListener } from './tunnel-listener.mjs';
+import { IP2PTransport } from './transport/p2p-transport.mjs';
 
 /** P2P 接続のライフサイクルを表す状態。 */
 export type AppState =
