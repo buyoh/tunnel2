@@ -1,13 +1,20 @@
+import { parseArgs } from 'node:util';
 import readline from 'node:readline/promises';
 import { TunnelApp } from './tunnel-app.mjs';
 
 export async function runCli(app: TunnelApp, args: string[]): Promise<void> {
-  const command = args[0];
+  const { positionals } = parseArgs({
+    args,
+    allowPositionals: true,
+    options: {},
+  });
+
+  const [command, arg] = positionals;
 
   setupEventHandlers(app);
 
   if (command === 'listen') {
-    const port = Number(args[1]);
+    const port = Number(arg);
     if (!Number.isInteger(port) || port <= 0 || port > 65535) {
       throw new Error('listen port must be 1-65535');
     }
@@ -19,7 +26,7 @@ export async function runCli(app: TunnelApp, args: string[]): Promise<void> {
   }
 
   if (command === 'forward') {
-    const target = args[1] ?? '';
+    const target = arg ?? '';
     const [host, portText] = target.split(':');
     const port = Number(portText);
     if (!host || !Number.isInteger(port) || port <= 0 || port > 65535) {
