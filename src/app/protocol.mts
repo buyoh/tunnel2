@@ -1,3 +1,4 @@
+/** 多重化プロトコルのメッセージ種別。 */
 export enum MessageType {
   CONNECT = 0x01,
   CONNECT_ACK = 0x02,
@@ -6,6 +7,7 @@ export enum MessageType {
   CLOSE = 0x20,
 }
 
+/** connId・種別・ペイロードからなるプロトコルメッセージ。 */
 export interface ProtocolMessage {
   connId: number;
   type: MessageType;

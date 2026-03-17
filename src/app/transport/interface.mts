@@ -1,7 +1,9 @@
 import { SignalingData } from '../signaling.mjs';
 
+/** P2P データチャネルの接続状態。 */
 export type P2PChannelState = 'new' | 'connecting' | 'open' | 'closing' | 'closed';
 
+/** P2P トランスポートが発火するイベントハンドラ群。 */
 export interface P2PTransportEvents {
   onOpen: () => void;
   onMessage: (data: Buffer) => void;
@@ -10,6 +12,7 @@ export interface P2PTransportEvents {
   onBufferedAmountLow: () => void;
 }
 
+/** P2P トランスポートの抽象インタフェース。 */
 export interface IP2PTransport {
   createOffer(): Promise<SignalingData>;
   acceptOffer(offer: SignalingData): Promise<SignalingData>;

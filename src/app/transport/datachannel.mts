@@ -4,6 +4,7 @@ import { IP2PTransport, P2PChannelState, P2PTransportEvents } from './interface.
 
 type DataChannelMessage = string | Buffer | ArrayBuffer;
 
+/** node-datachannel の DataChannel が持つべき最小限のメソッド抽象。 */
 interface DataChannelLike {
   close(): void;
   sendMessageBinary(buffer: Buffer): boolean;
@@ -16,6 +17,7 @@ interface DataChannelLike {
   onMessage(cb: (msg: DataChannelMessage) => void): void;
 }
 
+/** node-datachannel の PeerConnection が持つべき最小限のメソッド抽象。 */
 interface PeerConnectionLike {
   close(): void;
   setRemoteDescription(sdp: string, type: SignalingData['type']): void;
@@ -28,10 +30,12 @@ interface PeerConnectionLike {
   onGatheringStateChange(cb: (state: string) => void): void;
 }
 
+/** node-datachannel モジュールの型抽象（DI 用）。 */
 interface NodeDataChannelModule {
   PeerConnection: new (label: string, config: { iceServers: string[] }) => PeerConnectionLike;
 }
 
+/** DataChannelTransport の生成オプション。 */
 interface DataChannelTransportConfig {
   iceServers?: string[];
   nodeDataChannelModule?: NodeDataChannelModule;

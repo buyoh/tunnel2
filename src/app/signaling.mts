@@ -1,8 +1,10 @@
+/** ICE candidate 情報。 */
 export interface SignalingCandidate {
   candidate: string;
   mid: string;
 }
 
+/** SDP と ICE candidate をまとめたシグナリング情報。 */
 export interface SignalingData {
   sdp: string;
   type: 'offer' | 'answer';

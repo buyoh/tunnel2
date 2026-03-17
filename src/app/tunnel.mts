@@ -51,6 +51,7 @@ class NodeTcpClientFactory implements ITcpClientFactory {
 const DEFAULT_TCP_SERVER_FACTORY = new NodeTcpServerFactory();
 const DEFAULT_TCP_CLIENT_FACTORY = new NodeTcpClientFactory();
 
+/** トンネルで管理される個別 TCP 接続の状態。 */
 interface ConnectionEntry {
   socket: ITcpSocket;
   paused: boolean;

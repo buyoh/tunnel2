@@ -4,6 +4,7 @@ import { decodeSignaling, encodeSignaling } from './signaling.mjs';
 import { TunnelForwarder, TunnelListener } from './tunnel.mjs';
 import { IP2PTransport } from './transport/interface.mjs';
 
+/** P2P 接続のライフサイクルを表す状態。 */
 export type AppState =
   | 'idle'
   | 'waiting-offer'
