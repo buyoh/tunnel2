@@ -13,7 +13,7 @@ export async function runCli(app: TunnelApp, args: string[]): Promise<void> {
     }
 
     await app.listen(port);
-    const answer = await promptInput('相手のアンサー情報を貼り付けてください:\n> ');
+    const answer = await promptInput('Paste the remote answer info:\n> ');
     await app.setRemoteAnswer(answer);
     return;
   }
@@ -27,7 +27,7 @@ export async function runCli(app: TunnelApp, args: string[]): Promise<void> {
     }
 
     await app.forward(host, port);
-    const offer = await promptInput('相手のオファー情報を貼り付けてください:\n> ');
+    const offer = await promptInput('Paste the remote offer info:\n> ');
     await app.setRemoteOffer(offer);
     return;
   }
@@ -37,25 +37,25 @@ export async function runCli(app: TunnelApp, args: string[]): Promise<void> {
 
 function setupEventHandlers(app: TunnelApp): void {
   app.on('offer-ready', (encoded: string) => {
-    console.log('以下のオファー情報を相手に送ってください:');
+    console.log('Send the following offer info to the remote peer:');
     console.log(encoded);
   });
 
   app.on('answer-ready', (encoded: string) => {
-    console.log('以下のアンサー情報を相手に送ってください:');
+    console.log('Send the following answer info to the remote peer:');
     console.log(encoded);
   });
 
   app.on('connected', () => {
-    console.log('接続しました');
+    console.log('Connected');
   });
 
   app.on('disconnected', () => {
-    console.log('切断されました');
+    console.log('Disconnected');
   });
 
   app.on('error', (error: Error) => {
-    console.error('エラー:', error.message);
+    console.error('Error:', error.message);
   });
 }
 
