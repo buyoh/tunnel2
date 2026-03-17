@@ -6,3 +6,4 @@
 
 - [daemon-cli/](daemon-cli/README.md) — Agent 向け daemon + POST 形式 CLI
 - [code-review-fixes/](code-review-fixes/README.md) — update-code SKILL.md 注意事項違反の修正
+- [signaling-server/](signaling-server/README.md) — WebSocket ベースのシグナリングサーバ (Express + Socket.IO)
