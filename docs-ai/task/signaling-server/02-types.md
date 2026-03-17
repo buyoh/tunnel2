@@ -40,7 +40,7 @@ interface AuthenticatePayload {
 interface AuthResultPayload {
   success: boolean;
   groupName?: string;  // 認証成功時、所属グループ名
-  error?: string;      // 認証失敗時、理由
+  error?: string;      // 認証失敗時、固定の汎用メッセージ ("authentication failed")
 }
 ```
 
@@ -50,7 +50,7 @@ interface AuthResultPayload {
 /** クライアント → サーバ: ルーム参加 */
 interface JoinPayload {
   mode: 'listen' | 'forward';
-  room: string;  // 任意のルーム名
+  room: string;  // ルーム名 (1〜64文字、英数字・ハイフン・アンダースコアのみ: /^[a-zA-Z0-9_-]{1,64}$/)
 }
 
 /** サーバ → クライアント: マッチング成立 */
