@@ -27,4 +27,24 @@ describe('protocol', () => {
   it('throws on too short message', () => {
     expect(() => decodeMessage(Buffer.from([1, 2, 3]))).toThrow('at least 5 bytes');
   });
+
+  it('supports PING and PONG types', () => {
+    const ping = decodeMessage(
+      encodeMessage({
+        connId: 0,
+        type: MessageType.PING,
+        payload: Buffer.from('hello', 'utf-8'),
+      }),
+    );
+    const pong = decodeMessage(
+      encodeMessage({
+        connId: 0,
+        type: MessageType.PONG,
+        payload: Buffer.from('hello', 'utf-8'),
+      }),
+    );
+
+    expect(ping.type).toBe(MessageType.PING);
+    expect(pong.type).toBe(MessageType.PONG);
+  });
 });

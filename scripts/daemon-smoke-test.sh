@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # daemon の簡易動作確認スクリプト
-# alice(listen 側) と bob(forward 側) で daemon を起動し、
+# alice(offer 側) と bob(accept 側) で daemon を起動し、
 # シグナリング交換まで一通りのフローを確認する。
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -41,12 +41,12 @@ else
 fi
 
 ###############################################
-step "3. listen command (alice)"
-RESULT=$(scripts/daemon-post.sh --id alice listen port=18080 2>/dev/null) || true
+step "3. connect-offer command (alice)"
+RESULT=$(scripts/daemon-post.sh --id alice connect-offer 2>/dev/null) || true
 if echo "$RESULT" | grep -q '"ok":true'; then
-  ok "listen accepted"
+  ok "connect-offer accepted"
 else
-  fail "listen rejected: $RESULT"
+  fail "connect-offer rejected: $RESULT"
 fi
 
 ###############################################
@@ -80,12 +80,12 @@ else
 fi
 
 ###############################################
-step "6. forward command (bob)"
-RESULT=$(scripts/daemon-post.sh --id bob forward host=localhost port=8080 2>/dev/null) || true
+step "6. connect-accept command (bob)"
+RESULT=$(scripts/daemon-post.sh --id bob connect-accept 2>/dev/null) || true
 if echo "$RESULT" | grep -q '"ok":true'; then
-  ok "forward accepted"
+  ok "connect-accept accepted"
 else
-  fail "forward rejected: $RESULT"
+  fail "connect-accept rejected: $RESULT"
 fi
 
 ###############################################
@@ -155,7 +155,38 @@ else
 fi
 
 ###############################################
-step "11. close command"
+step "11. ping (alice -> bob)"
+if [[ "$ALICE_STATE" == "connected" ]]; then
+  RESULT=$(scripts/daemon-post.sh --id alice ping message=hello 2>/dev/null) || true
+  if echo "$RESULT" | grep -q '"ok":true'; then
+    ok "ping sent"
+  else
+    fail "ping failed: $RESULT"
+  fi
+else
+  fail "skipped (not connected)"
+fi
+
+###############################################
+step "12. Check pong-received event (alice)"
+sleep 1
+STATUS=$(scripts/daemon-status.sh --id alice 2>/dev/null)
+PONG=$(echo "$STATUS" | node -e "
+const d=require('fs').readFileSync('/dev/stdin','utf8');
+const j=JSON.parse(d);
+const e=j.events.find(e=>e.type==='pong-received');
+if(e && e.data==='hello') console.log(e.data);
+else process.exit(1);
+" 2>/dev/null) || true
+
+if [[ "$PONG" == "hello" ]]; then
+  ok "pong-received with correct message"
+else
+  fail "pong-received not found or wrong message"
+fi
+
+###############################################
+step "13. close command"
 RESULT=$(scripts/daemon-post.sh --id alice close 2>/dev/null) || true
 if echo "$RESULT" | grep -q '"ok":true'; then
   ok "close accepted"
@@ -164,7 +195,7 @@ else
 fi
 
 ###############################################
-step "12. Stop daemons"
+step "14. Stop daemons"
 scripts/daemon-stop.sh --id alice >/dev/null 2>&1
 scripts/daemon-stop.sh --id bob   >/dev/null 2>&1
 ok "daemons stopped"

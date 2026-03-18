@@ -63,17 +63,26 @@ export class DaemonController {
         case 'listen':
           await this.app.listen(this.getPortArg(normalizedArgs.value.port, 'listen.port'));
           break;
+        case 'connect-offer':
+          await this.app.connectOffer();
+          break;
         case 'forward':
           await this.app.forward(
             this.getHostArg(normalizedArgs.value.host, 'forward.host'),
             this.getPortArg(normalizedArgs.value.port, 'forward.port'),
           );
           break;
+        case 'connect-accept':
+          await this.app.connectAccept();
+          break;
         case 'set-remote-offer':
           await this.app.setRemoteOffer(this.getEncodedArg(normalizedArgs.value.encoded, 'set-remote-offer.encoded'));
           break;
         case 'set-remote-answer':
           await this.app.setRemoteAnswer(this.getEncodedArg(normalizedArgs.value.encoded, 'set-remote-answer.encoded'));
+          break;
+        case 'ping':
+          this.app.ping(this.getMessageArg(normalizedArgs.value.message, 'ping.message'));
           break;
         case 'close':
           this.app.close();
@@ -107,6 +116,7 @@ export class DaemonController {
     this.app.on('answer-ready', (encoded: string) => push('answer-ready', encoded));
     this.app.on('connected', () => push('connected'));
     this.app.on('disconnected', () => push('disconnected'));
+    this.app.on('pong-received', (message: string) => push('pong-received', message));
     this.app.on('error', (err: Error) => push('error', err.message));
   }
 
@@ -139,6 +149,13 @@ export class DaemonController {
   }
 
   private getEncodedArg(value: unknown, field: string): string {
+    if (typeof value !== 'string' || value.length === 0) {
+      throw new Error(`${field} must be a non-empty string`);
+    }
+    return value;
+  }
+
+  private getMessageArg(value: unknown, field: string): string {
     if (typeof value !== 'string' || value.length === 0) {
       throw new Error(`${field} must be a non-empty string`);
     }

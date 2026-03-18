@@ -5,6 +5,8 @@ export enum MessageType {
   CONNECT_ERR = 0x03,
   DATA = 0x10,
   CLOSE = 0x20,
+  PING = 0x30,
+  PONG = 0x31,
 }
 
 /** connId・種別・ペイロードからなるプロトコルメッセージ。 */

@@ -1,13 +1,15 @@
 import { DaemonController } from './daemon-controller.mjs';
+import { encodeSignaling } from './signaling-data.mjs';
 import { TunnelApp } from './tunnel-app.mjs';
 import { MockTransport } from './transport/mock-transport.mjs';
 
 describe('DaemonController', () => {
   let controller: DaemonController;
   let app: TunnelApp;
+  let transport: MockTransport;
 
   beforeEach(() => {
-    const transport = new MockTransport();
+    transport = new MockTransport();
     app = new TunnelApp(transport);
     controller = new DaemonController(app);
   });
@@ -68,6 +70,40 @@ describe('DaemonController', () => {
       expect(res.body.ok).toBe(true);
     });
 
+    it('connect-offer コマンドが成功し 200 を返す', async () => {
+      const res = await controller.executeCommand('connect-offer', {});
+
+      expect(res.status).toBe(200);
+      expect(res.body.ok).toBe(true);
+    });
+
+    it('connect-accept コマンドが成功し 200 を返す', async () => {
+      const res = await controller.executeCommand('connect-accept', {});
+
+      expect(res.status).toBe(200);
+      expect(res.body.ok).toBe(true);
+    });
+
+    it('ping コマンドが成功し 200 を返す', async () => {
+      await controller.executeCommand('connect-offer', {});
+      await controller.executeCommand(
+        'set-remote-answer',
+        {
+          encoded: encodeSignaling({
+            sdp: 'mock-answer',
+            type: 'answer',
+            candidates: [{ candidate: 'mock-candidate', mid: '0' }],
+          }),
+        },
+      );
+      transport.simulateOpen();
+
+      const res = await controller.executeCommand('ping', { message: 'hello' });
+
+      expect(res.status).toBe(200);
+      expect(res.body.ok).toBe(true);
+    });
+
     it('close コマンドが成功し 200 を返す', async () => {
       const res = await controller.executeCommand('close', {});
 
@@ -90,6 +126,27 @@ describe('DaemonController', () => {
       expect(res.status).toBe(400);
       expect(res.body.ok).toBe(false);
       expect(res.body.error).toContain('listen.port');
+    });
+
+    it('ping の空 message を 400 で弾く', async () => {
+      await controller.executeCommand('connect-offer', {});
+      await controller.executeCommand(
+        'set-remote-answer',
+        {
+          encoded: encodeSignaling({
+            sdp: 'mock-answer',
+            type: 'answer',
+            candidates: [{ candidate: 'mock-candidate', mid: '0' }],
+          }),
+        },
+      );
+      transport.simulateOpen();
+
+      const res = await controller.executeCommand('ping', { message: '' });
+
+      expect(res.status).toBe(400);
+      expect(res.body.ok).toBe(false);
+      expect(res.body.error).toContain('ping.message');
     });
   });
 });

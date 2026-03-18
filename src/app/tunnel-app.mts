@@ -1,5 +1,5 @@
 import { EventEmitter } from 'node:events';
-import { decodeMessage } from './protocol-message.mjs';
+import { decodeMessage, encodeMessage, MessageType } from './protocol-message.mjs';
 import { decodeSignaling, encodeSignaling } from './signaling-data.mjs';
 import { TunnelForwarder } from './tunnel-forwarder.mjs';
 import { TunnelListener } from './tunnel-listener.mjs';
@@ -39,11 +39,30 @@ export class TunnelApp extends EventEmitter {
         this.emit('connected');
       },
       onMessage: (data: Buffer) => {
-        if (!this.tunnel) {
-          return;
-        }
         try {
-          this.tunnel.handleMessage(decodeMessage(data));
+          const msg = decodeMessage(data);
+
+          if (msg.type === MessageType.PING) {
+            this.transport.sendMessage(
+              encodeMessage({
+                connId: 0,
+                type: MessageType.PONG,
+                payload: msg.payload,
+              }),
+            );
+            return;
+          }
+
+          if (msg.type === MessageType.PONG) {
+            this.emit('pong-received', msg.payload.toString('utf-8'));
+            return;
+          }
+
+          if (!this.tunnel) {
+            return;
+          }
+
+          this.tunnel.handleMessage(msg);
         } catch (error) {
           this.emit('error', error as Error);
         }
@@ -81,9 +100,24 @@ export class TunnelApp extends EventEmitter {
     this.setState('waiting-answer');
   }
 
+  async connectOffer(): Promise<void> {
+    this.ensureState('idle', 'connectOffer() can only be called in idle state');
+
+    this.setState('offering');
+
+    const offer = await this.transport.createOffer();
+    this.emit('offer-ready', encodeSignaling(offer));
+    this.setState('waiting-answer');
+  }
+
   async forward(host: string, port: number): Promise<void> {
     this.ensureState('idle', 'forward() can only be called in idle state');
     this.tunnel = new TunnelForwarder(host, port, this.transport);
+    this.setState('waiting-offer');
+  }
+
+  async connectAccept(): Promise<void> {
+    this.ensureState('idle', 'connectAccept() can only be called in idle state');
     this.setState('waiting-offer');
   }
 
@@ -104,6 +138,20 @@ export class TunnelApp extends EventEmitter {
     const answer = decodeSignaling(encoded);
     this.transport.applyAnswer(answer);
     this.setState('connecting');
+  }
+
+  ping(message: string): void {
+    if (this.state !== 'connected') {
+      throw new Error('ping() can only be called in connected state');
+    }
+
+    this.transport.sendMessage(
+      encodeMessage({
+        connId: 0,
+        type: MessageType.PING,
+        payload: Buffer.from(message, 'utf-8'),
+      }),
+    );
   }
 
   close(): void {
