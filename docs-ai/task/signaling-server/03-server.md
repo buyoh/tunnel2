@@ -13,10 +13,10 @@
 |---|---|---|
 | `src/index.mts` | エントリポイント | 環境変数読み込み・サーバ起動のみ |
 | `src/app/server.mts` | フレームワーク層 | Express + Socket.IO 初期化、Socket イベントと `ConnectionHandler` の接続 |
-| `src/app/connection-handler.mts` | ドメイン層 | 接続ライフサイクル状態機械 (未認証→認証済→参加済→マッチ済)。key-store / auth-rate-limiter / matching-service のオーケストレーション |
-| `src/app/key-store.mts` | ドメイン層 | 公開鍵ストア管理、チャレンジ生成、署名検証 |
-| `src/app/auth-rate-limiter.mts` | ドメイン層 | 認証試行のレートリミット |
-| `src/app/matching-service.mts` | ドメイン層 | ルームマッチング、シグナリング中継ロジック |
+| `src/app/ConnectionHandler.mts` | ドメイン層 | 接続ライフサイクル状態機械 (未認証→認証済→参加済→マッチ済)。KeyStore / AuthRateLimiter / MatchingService のオーケストレーション |
+| `src/app/KeyStore.mts` | ドメイン層 | 公開鍵ストア管理、チャレンジ生成、署名検証 |
+| `src/app/AuthRateLimiter.mts` | ドメイン層 | 認証試行のレートリミット |
+| `src/app/MatchingService.mts` | ドメイン層 | ルームマッチング、シグナリング中継ロジック |
 | `keys.json` | データ | 公開鍵登録データ |
 
 ## パッケージ情報
@@ -38,7 +38,7 @@
 }
 ```
 
-## 1. 公開鍵認証 (`src/app/key-store.mts`)
+## 1. 公開鍵認証 (`src/app/KeyStore.mts`)
 
 ### 鍵ストレージ形式
 
@@ -106,7 +106,7 @@ function verifySignature(publicKeyPem: string, nonce: string, signatureHex: stri
 - 認証失敗時のエラーメッセージは固定文言 `"authentication failed"` のみ返し、失敗理由の詳細を公開しない
 - IP 単位および全体の認証試行レートリミットを適用 (後述)
 
-## 2. 認証レートリミット (`src/app/auth-rate-limiter.mts`)
+## 2. 認証レートリミット (`src/app/AuthRateLimiter.mts`)
 
 ブルートフォース攻撃を防止するため、認証失敗回数に基づくレートリミットを IP 単位・全体の 2 層で適用する。
 
@@ -158,12 +158,12 @@ class AuthRateLimiter {
 2. `perIp` に該当 IP が未登録かつ `perIp.size >= maxTrackedIps` の場合、最も古いエントリの IP を削除して空きを確保
 3. 該当 IP のタイムスタンプ配列に現在時刻を追加
 
-### connection-handler.mts への組み込み
+### ConnectionHandler.mts への組み込み
 
 `ConnectionHandler` が接続開始時にレートリミットを判定し、認証失敗時に記録する:
 
 ```typescript
-// connection-handler.mts 内
+// ConnectionHandler.mts 内
 onConnect(ip: string): void {
   if (!this.rateLimiter.isAllowed(ip)) {
     this.emitter.emitError('too many requests');
@@ -185,7 +185,7 @@ onAuthenticate(payload: AuthenticatePayload): void {
 ブロック時は `emitter` 経由で `"too many requests"` を返して即切断する。
 フレームワーク層 (`server.mts`) はレートリミットの存在を知らない。
 
-## 3. ルームマッチング (`src/app/matching-service.mts`)
+## 3. ルームマッチング (`src/app/MatchingService.mts`)
 
 ### 概念
 
@@ -269,7 +269,7 @@ type PeerMap = Map<string, string>;
 
 `signal` イベントを受信したら、`PeerMap` からペア相手を探して中継するだけ。
 
-## 4. 接続ライフサイクル管理 (`src/app/connection-handler.mts`)
+## 4. 接続ライフサイクル管理 (`src/app/ConnectionHandler.mts`)
 
 接続ごとの状態遷移とドメインロジックのオーケストレーションを担当する。
 Socket.IO に依存せず、コールバックインターフェース (`ConnectionEmitter`) 経由で出力する。
@@ -436,8 +436,8 @@ httpServer.listen(PORT, () => {
 
 | テスト対象 | テスト方法 |
 |---|---|
-| `key-store.mts` | `generateChallenge()` / `verifySignature()` / `KeyStore` の Unit テスト |
-| `auth-rate-limiter.mts` | `AuthRateLimiter` の IP 単位ブロック / 全体ブロック / ウィンドウ経過後のリセット / 追跡 IP 上限の Unit テスト |
-| `matching-service.mts` | `MatchingService` の join/leave/マッチング Unit テスト |
-| `connection-handler.mts` | `ConnectionEmitter` をテスト用実装に差し替え、状態遷移・認証フロー・マッチングフロー・中継フローの Unit テスト |
+| `KeyStore.mts` | `generateChallenge()` / `verifySignature()` / `KeyStore` の Unit テスト |
+| `AuthRateLimiter.mts` | `AuthRateLimiter` の IP 単位ブロック / 全体ブロック / ウィンドウ経過後のリセット / 追跡 IP 上限の Unit テスト |
+| `MatchingService.mts` | `MatchingService` の join/leave/マッチング Unit テスト |
+| `ConnectionHandler.mts` | `ConnectionEmitter` をテスト用実装に差し替え、状態遷移・認証フロー・マッチングフロー・中継フローの Unit テスト |
 | `server.mts` | socket.io-client を用いた結合テスト |
