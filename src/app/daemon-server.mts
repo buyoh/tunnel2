@@ -12,7 +12,7 @@ export class DaemonServer {
 
   constructor(
     private readonly controller: DaemonController,
-    private readonly socketPath: string,
+    private readonly socketPath: string
   ) {
     this.expressApp = express();
     this.httpServer = http.createServer(this.expressApp);
@@ -29,7 +29,10 @@ export class DaemonServer {
 
     this.expressApp.post('/api/command', async (req, res) => {
       const body = req.body as { action?: unknown; args?: unknown };
-      const result = await this.controller.executeCommand(body.action, body.args);
+      const result = await this.controller.executeCommand(
+        body.action,
+        body.args
+      );
       res.status(result.status).json(result.body);
     });
   }

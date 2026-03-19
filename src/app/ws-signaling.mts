@@ -53,16 +53,38 @@ export interface AppFactory {
 }
 
 export interface SignalingSocket {
-  on(event: 'challenge', listener: (payload: Parameters<ServerToClientEvents['challenge']>[0]) => void): this;
-  on(event: 'authResult', listener: (payload: Parameters<ServerToClientEvents['authResult']>[0]) => void): this;
-  on(event: 'matched', listener: (payload: Parameters<ServerToClientEvents['matched']>[0]) => void): this;
-  on(event: 'signal', listener: (payload: Parameters<ServerToClientEvents['signal']>[0]) => void): this;
+  on(
+    event: 'challenge',
+    listener: (
+      payload: Parameters<ServerToClientEvents['challenge']>[0]
+    ) => void
+  ): this;
+  on(
+    event: 'authResult',
+    listener: (
+      payload: Parameters<ServerToClientEvents['authResult']>[0]
+    ) => void
+  ): this;
+  on(
+    event: 'matched',
+    listener: (payload: Parameters<ServerToClientEvents['matched']>[0]) => void
+  ): this;
+  on(
+    event: 'signal',
+    listener: (payload: Parameters<ServerToClientEvents['signal']>[0]) => void
+  ): this;
   on(event: 'error', listener: (payload: ErrorPayload) => void): this;
   on(event: 'connect_error', listener: (error: Error) => void): this;
   on(event: 'disconnect', listener: () => void): this;
   emit(event: 'authenticate', payload: AuthenticatePayload): unknown;
-  emit(event: 'join', payload: Parameters<ClientToServerEvents['join']>[0]): unknown;
-  emit(event: 'signal', payload: Parameters<ClientToServerEvents['signal']>[0]): unknown;
+  emit(
+    event: 'join',
+    payload: Parameters<ClientToServerEvents['join']>[0]
+  ): unknown;
+  emit(
+    event: 'signal',
+    payload: Parameters<ClientToServerEvents['signal']>[0]
+  ): unknown;
   disconnect(): unknown;
   removeAllListeners(): this;
 }
@@ -119,7 +141,7 @@ export class WsSignaling extends EventEmitter {
     timers: RetryTimers = {
       setTimeout: (callback, delayMs) => setTimeout(callback, delayMs),
       clearTimeout: (handle) => clearTimeout(handle),
-    },
+    }
   ) {
     super();
     this.socketFactory = socketFactory;
@@ -283,10 +305,15 @@ export class WsSignaling extends EventEmitter {
     }
 
     if (!this.options.targetHost || !this.options.targetPort) {
-      throw new Error('targetHost and targetPort are required for forward mode');
+      throw new Error(
+        'targetHost and targetPort are required for forward mode'
+      );
     }
     if (session.app.getState() === 'idle') {
-      await session.app.forward(this.options.targetHost, this.options.targetPort);
+      await session.app.forward(
+        this.options.targetHost,
+        this.options.targetPort
+      );
     }
   }
 
@@ -347,7 +374,10 @@ export class WsSignaling extends EventEmitter {
       return this.options.privateKeyPem;
     }
     if (!this.privateKeyPem) {
-      this.privateKeyPem = fs.readFileSync(this.options.privateKeyPath, 'utf-8');
+      this.privateKeyPem = fs.readFileSync(
+        this.options.privateKeyPath,
+        'utf-8'
+      );
     }
     return this.privateKeyPem;
   }
@@ -370,5 +400,7 @@ export class WsSignaling extends EventEmitter {
 
 /** 受け取った nonce を Ed25519 秘密鍵で署名する。 */
 export function signChallenge(privateKeyPem: string, nonce: string): string {
-  return crypto.sign(null, Buffer.from(nonce, 'hex'), privateKeyPem).toString('hex');
+  return crypto
+    .sign(null, Buffer.from(nonce, 'hex'), privateKeyPem)
+    .toString('hex');
 }

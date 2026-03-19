@@ -1,5 +1,9 @@
 import { EventEmitter } from 'node:events';
-import { decodeMessage, encodeMessage, MessageType } from './protocol-message.mjs';
+import {
+  decodeMessage,
+  encodeMessage,
+  MessageType,
+} from './protocol-message.mjs';
 import { decodeSignaling, encodeSignaling } from './signaling-data.mjs';
 import { TunnelForwarder } from './tunnel-forwarder.mjs';
 import { TunnelListener } from './tunnel-listener.mjs';
@@ -48,7 +52,7 @@ export class TunnelApp extends EventEmitter {
                 connId: 0,
                 type: MessageType.PONG,
                 payload: msg.payload,
-              }),
+              })
             );
             return;
           }
@@ -117,12 +121,18 @@ export class TunnelApp extends EventEmitter {
   }
 
   async connectAccept(): Promise<void> {
-    this.ensureState('idle', 'connectAccept() can only be called in idle state');
+    this.ensureState(
+      'idle',
+      'connectAccept() can only be called in idle state'
+    );
     this.setState('waiting-offer');
   }
 
   async setRemoteOffer(encoded: string): Promise<void> {
-    this.ensureState('waiting-offer', 'setRemoteOffer() can only be called in waiting-offer state');
+    this.ensureState(
+      'waiting-offer',
+      'setRemoteOffer() can only be called in waiting-offer state'
+    );
 
     const offer = decodeSignaling(encoded);
     this.setState('answering');
@@ -133,7 +143,10 @@ export class TunnelApp extends EventEmitter {
   }
 
   async setRemoteAnswer(encoded: string): Promise<void> {
-    this.ensureState('waiting-answer', 'setRemoteAnswer() can only be called in waiting-answer state');
+    this.ensureState(
+      'waiting-answer',
+      'setRemoteAnswer() can only be called in waiting-answer state'
+    );
 
     const answer = decodeSignaling(encoded);
     this.transport.applyAnswer(answer);
@@ -150,7 +163,7 @@ export class TunnelApp extends EventEmitter {
         connId: 0,
         type: MessageType.PING,
         payload: Buffer.from(message, 'utf-8'),
-      }),
+      })
     );
   }
 

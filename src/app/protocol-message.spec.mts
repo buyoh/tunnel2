@@ -1,4 +1,8 @@
-import { decodeMessage, encodeMessage, MessageType } from './protocol-message.mjs';
+import {
+  decodeMessage,
+  encodeMessage,
+  MessageType,
+} from './protocol-message.mjs';
 
 describe('protocol', () => {
   it('round-trips DATA messages', () => {
@@ -25,7 +29,9 @@ describe('protocol', () => {
   });
 
   it('throws on too short message', () => {
-    expect(() => decodeMessage(Buffer.from([1, 2, 3]))).toThrow('at least 5 bytes');
+    expect(() => decodeMessage(Buffer.from([1, 2, 3]))).toThrow(
+      'at least 5 bytes'
+    );
   });
 
   it('supports PING and PONG types', () => {
@@ -34,14 +40,14 @@ describe('protocol', () => {
         connId: 0,
         type: MessageType.PING,
         payload: Buffer.from('hello', 'utf-8'),
-      }),
+      })
     );
     const pong = decodeMessage(
       encodeMessage({
         connId: 0,
         type: MessageType.PONG,
         payload: Buffer.from('hello', 'utf-8'),
-      }),
+      })
     );
 
     expect(ping.type).toBe(MessageType.PING);

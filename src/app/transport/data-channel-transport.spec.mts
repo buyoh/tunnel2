@@ -18,9 +18,14 @@ interface DataChannelLike {
 class FakePeerConnection {
   private onStateChangeHandler: ((state: string) => void) | null = null;
   private onDataChannelHandler: ((dc: DataChannelLike) => void) | null = null;
-  private onLocalDescriptionHandler: ((sdp: string, type: string) => void) | null = null;
-  private onLocalCandidateHandler: ((candidate: string, mid: string) => void) | null = null;
-  private onGatheringStateChangeHandler: ((state: string) => void) | null = null;
+  private onLocalDescriptionHandler:
+    | ((sdp: string, type: string) => void)
+    | null = null;
+  private onLocalCandidateHandler:
+    | ((candidate: string, mid: string) => void)
+    | null = null;
+  private onGatheringStateChangeHandler: ((state: string) => void) | null =
+    null;
 
   readonly createdDataChannel = new FakeDataChannel();
 
@@ -85,7 +90,8 @@ class FakePeerConnection {
 
 class FakeDataChannel {
   private onOpenHandler: (() => void) | null = null;
-  private onMessageHandler: ((message: DataChannelMessage) => void) | null = null;
+  private onMessageHandler: ((message: DataChannelMessage) => void) | null =
+    null;
   private onClosedHandler: (() => void) | null = null;
   private onBufferedAmountLowHandler: (() => void) | null = null;
 
@@ -144,7 +150,8 @@ class FakeDataChannel {
 
 class FakeDataChannelWithoutOnClosed {
   private onOpenHandler: (() => void) | null = null;
-  private onMessageHandler: ((message: DataChannelMessage) => void) | null = null;
+  private onMessageHandler: ((message: DataChannelMessage) => void) | null =
+    null;
   private onBufferedAmountLowHandler: (() => void) | null = null;
 
   bufferedAmount(): number {
@@ -193,7 +200,10 @@ class FakeDataChannelWithoutOnClosed {
 }
 
 describe('DataChannelTransport', () => {
-  function createEvents(spy: { closed: number; states: string[] }): P2PTransportEvents {
+  function createEvents(spy: {
+    closed: number;
+    states: string[];
+  }): P2PTransportEvents {
     return {
       onOpen: () => {},
       onMessage: () => {},
@@ -356,7 +366,11 @@ describe('DataChannelTransport (large)', () => {
       onBufferedAmountLow: () => {},
     });
 
-    const dummyOffer = { sdp: 'v=0\r\n', type: 'offer' as const, candidates: [] };
+    const dummyOffer = {
+      sdp: 'v=0\r\n',
+      type: 'offer' as const,
+      candidates: [],
+    };
 
     // acceptOffer も createPeer を呼ぶ
     // SDP が不正でも createPeer 段階の API エラーは即座に発生する

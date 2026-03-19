@@ -78,7 +78,11 @@ describe('TunnelListener', () => {
       onBufferedAmountLow: () => {},
     });
 
-    const listener = new TunnelListener(31001, transport, new MockTcpServerFactory(tcpServer));
+    const listener = new TunnelListener(
+      31001,
+      transport,
+      new MockTcpServerFactory(tcpServer)
+    );
     listener.start();
 
     tcpServer.accept(new MockTcpSocket());

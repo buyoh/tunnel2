@@ -31,9 +31,21 @@ export async function runWsCli(args: string[]): Promise<void> {
 
   const signaling =
     command === 'ws-listen'
-      ? createListenClient(serverUrl, privateKeyPath, publicKeyPath, room, values.port ?? '')
+      ? createListenClient(
+          serverUrl,
+          privateKeyPath,
+          publicKeyPath,
+          room,
+          values.port ?? ''
+        )
       : command === 'ws-forward'
-        ? createForwardClient(serverUrl, privateKeyPath, publicKeyPath, room, values.target ?? '')
+        ? createForwardClient(
+            serverUrl,
+            privateKeyPath,
+            publicKeyPath,
+            room,
+            values.target ?? ''
+          )
         : null;
 
   if (!signaling) {
@@ -60,7 +72,7 @@ function createListenClient(
   privateKeyPath: string,
   publicKeyPath: string,
   room: string,
-  portText: string,
+  portText: string
 ): WsSignaling {
   const port = Number(portText);
   if (!Number.isInteger(port) || port <= 0 || port > 65535) {
@@ -81,7 +93,7 @@ function createListenClient(
       mode: 'listen',
       room,
       listenPort: port,
-    },
+    }
   );
 }
 
@@ -90,7 +102,7 @@ function createForwardClient(
   privateKeyPath: string,
   publicKeyPath: string,
   room: string,
-  target: string,
+  target: string
 ): WsSignaling {
   const [host, portText] = target.split(':');
   const port = Number(portText);
@@ -113,12 +125,16 @@ function createForwardClient(
       room,
       targetHost: host,
       targetPort: port,
-    },
+    }
   );
 }
 
 function printUsage(): void {
   console.log('Usage:');
-  console.log('  tunnel ws-listen --server <url> --key <private_key_path> --pubkey <public_key_path> --room <name> --port <port>');
-  console.log('  tunnel ws-forward --server <url> --key <private_key_path> --pubkey <public_key_path> --room <name> --target <host:port>');
+  console.log(
+    '  tunnel ws-listen --server <url> --key <private_key_path> --pubkey <public_key_path> --room <name> --port <port>'
+  );
+  console.log(
+    '  tunnel ws-forward --server <url> --key <private_key_path> --pubkey <public_key_path> --room <name> --target <host:port>'
+  );
 }

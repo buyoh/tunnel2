@@ -8,7 +8,9 @@ function createKeyPair(): { privateKeyPem: string; publicKeyPem: string } {
   const { privateKey, publicKey } = crypto.generateKeyPairSync('ed25519');
 
   return {
-    privateKeyPem: privateKey.export({ type: 'pkcs8', format: 'pem' }).toString(),
+    privateKeyPem: privateKey
+      .export({ type: 'pkcs8', format: 'pem' })
+      .toString(),
     publicKeyPem: publicKey.export({ type: 'spki', format: 'pem' }).toString(),
   };
 }
@@ -17,7 +19,10 @@ class FakeSocket extends EventEmitter implements SignalingSocket {
   readonly clientEvents: Array<{ event: string; payload: unknown }> = [];
 
   emit(event: 'authenticate', payload: AuthenticatePayload): boolean;
-  emit(event: 'join', payload: { mode: 'listen' | 'forward'; room: string }): boolean;
+  emit(
+    event: 'join',
+    payload: { mode: 'listen' | 'forward'; room: string }
+  ): boolean;
   emit(event: 'signal', payload: { data: string }): boolean;
   emit(event: string, payload?: unknown): boolean {
     this.clientEvents.push({ event, payload });
@@ -96,17 +101,21 @@ describe('WsSignaling', () => {
       },
       {
         create: () => socket,
-      },
+      }
     );
 
     signaling.start();
     socket.serverEmit('challenge', { nonce: 'ab'.repeat(32) });
 
-    const authenticate = socket.clientEvents.find((entry) => entry.event === 'authenticate');
+    const authenticate = socket.clientEvents.find(
+      (entry) => entry.event === 'authenticate'
+    );
     expect(authenticate?.payload).toMatchObject({ publicKey: publicKeyPem });
 
     socket.serverEmit('authResult', { success: true, groupName: 'team-alpha' });
-    expect(socket.clientEvents.find((entry) => entry.event === 'join')?.payload).toEqual({
+    expect(
+      socket.clientEvents.find((entry) => entry.event === 'join')?.payload
+    ).toEqual({
       mode: 'listen',
       room: 'room_1',
     });
@@ -115,7 +124,9 @@ describe('WsSignaling', () => {
     await Promise.resolve();
 
     expect(app.listenPorts).toEqual([8080]);
-    expect(socket.clientEvents.find((entry) => entry.event === 'signal')?.payload).toEqual({
+    expect(
+      socket.clientEvents.find((entry) => entry.event === 'signal')?.payload
+    ).toEqual({
       data: 'offer-base64',
     });
 
@@ -134,7 +145,10 @@ describe('WsSignaling', () => {
     let appIndex = 0;
     const signaling = new WsSignaling(
       {
-        create: () => ({ app: apps[appIndex++], transport: new MockTransport() }),
+        create: () => ({
+          app: apps[appIndex++],
+          transport: new MockTransport(),
+        }),
       },
       {
         serverUrl: 'ws://signal.test',
@@ -148,12 +162,15 @@ describe('WsSignaling', () => {
       },
       {
         create: () => sockets[socketIndex++],
-      },
+      }
     );
 
     signaling.start();
     sockets[0].serverEmit('challenge', { nonce: 'cd'.repeat(32) });
-    sockets[0].serverEmit('authResult', { success: true, groupName: 'team-alpha' });
+    sockets[0].serverEmit('authResult', {
+      success: true,
+      groupName: 'team-alpha',
+    });
     sockets[0].serverEmit('matched', { role: 'listen' });
     await Promise.resolve();
     sockets[0].serverEmit('signal', { data: 'answer-base64' });

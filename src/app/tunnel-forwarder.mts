@@ -1,6 +1,14 @@
 import * as net from 'node:net';
-import { encodeMessage, MessageType, ProtocolMessage } from './protocol-message.mjs';
-import { ConnectionEntry, ITcpClientFactory, ITcpSocket } from './tcp-socket.mjs';
+import {
+  encodeMessage,
+  MessageType,
+  ProtocolMessage,
+} from './protocol-message.mjs';
+import {
+  ConnectionEntry,
+  ITcpClientFactory,
+  ITcpSocket,
+} from './tcp-socket.mjs';
 import { IP2PTransport } from './transport/p2p-transport.mjs';
 
 const HIGH_WATER_MARK = 1 * 1024 * 1024;
@@ -25,7 +33,7 @@ export class TunnelForwarder {
     private readonly forwardHost: string,
     private readonly forwardPort: number,
     private readonly transport: IP2PTransport,
-    private readonly tcpClientFactory: ITcpClientFactory = DEFAULT_TCP_CLIENT_FACTORY,
+    private readonly tcpClientFactory: ITcpClientFactory = DEFAULT_TCP_CLIENT_FACTORY
   ) {}
 
   handleMessage(msg: ProtocolMessage): void {
@@ -70,11 +78,18 @@ export class TunnelForwarder {
 
   private handleConnect(connId: number): void {
     if (this.connections.has(connId)) {
-      this.send(connId, MessageType.CONNECT_ERR, Buffer.from('connId already exists', 'utf-8'));
+      this.send(
+        connId,
+        MessageType.CONNECT_ERR,
+        Buffer.from('connId already exists', 'utf-8')
+      );
       return;
     }
 
-    const socket = this.tcpClientFactory.createConnection({ host: this.forwardHost, port: this.forwardPort });
+    const socket = this.tcpClientFactory.createConnection({
+      host: this.forwardHost,
+      port: this.forwardPort,
+    });
 
     const entry: ConnectionEntry = {
       socket,
@@ -108,13 +123,21 @@ export class TunnelForwarder {
 
     socket.on('error', (error) => {
       if (!connected) {
-        this.send(connId, MessageType.CONNECT_ERR, Buffer.from(error.message, 'utf-8'));
+        this.send(
+          connId,
+          MessageType.CONNECT_ERR,
+          Buffer.from(error.message, 'utf-8')
+        );
       }
       socket.destroy();
     });
   }
 
-  private send(connId: number, type: MessageType, payload: Buffer = Buffer.alloc(0)): void {
+  private send(
+    connId: number,
+    type: MessageType,
+    payload: Buffer = Buffer.alloc(0)
+  ): void {
     this.transport.sendMessage(encodeMessage({ connId, type, payload }));
   }
 

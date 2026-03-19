@@ -1,7 +1,12 @@
 import { SignalingData } from '../signaling-data.mjs';
 
 /** P2P データチャネルの接続状態。 */
-export type P2PChannelState = 'new' | 'connecting' | 'open' | 'closing' | 'closed';
+export type P2PChannelState =
+  | 'new'
+  | 'connecting'
+  | 'open'
+  | 'closing'
+  | 'closed';
 
 /** P2P トランスポートが発火するイベントハンドラ群。 */
 export interface P2PTransportEvents {

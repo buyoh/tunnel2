@@ -1,6 +1,11 @@
 import { EventEmitter } from 'node:events';
 import { decodeMessage } from './protocol-message.mjs';
-import { ITcpClientFactory, ITcpServer, ITcpServerFactory, ITcpSocket } from './tcp-socket.mjs';
+import {
+  ITcpClientFactory,
+  ITcpServer,
+  ITcpServerFactory,
+  ITcpSocket,
+} from './tcp-socket.mjs';
 import { TunnelForwarder } from './tunnel-forwarder.mjs';
 import { TunnelListener } from './tunnel-listener.mjs';
 import { MockTransport } from './transport/mock-transport.mjs';
@@ -95,8 +100,17 @@ describe('TunnelForwarder integration', () => {
     const targetSocket = new MockTcpSocket();
     tcpClientFactory.enqueueSocket(targetSocket);
 
-    const listener = new TunnelListener(31002, a, new MockTcpServerFactory(tcpServer));
-    const forwarder = new TunnelForwarder('127.0.0.1', 18080, b, tcpClientFactory);
+    const listener = new TunnelListener(
+      31002,
+      a,
+      new MockTcpServerFactory(tcpServer)
+    );
+    const forwarder = new TunnelForwarder(
+      '127.0.0.1',
+      18080,
+      b,
+      tcpClientFactory
+    );
 
     a.setEvents({
       onOpen: () => {},
@@ -119,10 +133,14 @@ describe('TunnelForwarder integration', () => {
     targetSocket.emitConnect();
 
     localClient.emitData(Buffer.from('ping'));
-    expect(targetSocket.writes.map((item) => item.toString('utf-8'))).toContain('ping');
+    expect(targetSocket.writes.map((item) => item.toString('utf-8'))).toContain(
+      'ping'
+    );
 
     targetSocket.emitData(Buffer.from('echo:ping'));
-    expect(localClient.writes.map((item) => item.toString('utf-8'))).toContain('echo:ping');
+    expect(localClient.writes.map((item) => item.toString('utf-8'))).toContain(
+      'echo:ping'
+    );
 
     listener.stop();
     forwarder.stop();

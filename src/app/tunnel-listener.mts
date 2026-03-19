@@ -1,6 +1,15 @@
 import * as net from 'node:net';
-import { encodeMessage, MessageType, ProtocolMessage } from './protocol-message.mjs';
-import { ConnectionEntry, ITcpServer, ITcpServerFactory, ITcpSocket } from './tcp-socket.mjs';
+import {
+  encodeMessage,
+  MessageType,
+  ProtocolMessage,
+} from './protocol-message.mjs';
+import {
+  ConnectionEntry,
+  ITcpServer,
+  ITcpServerFactory,
+  ITcpSocket,
+} from './tcp-socket.mjs';
 import { IP2PTransport } from './transport/p2p-transport.mjs';
 
 const HIGH_WATER_MARK = 1 * 1024 * 1024;
@@ -28,7 +37,7 @@ export class TunnelListener {
   constructor(
     private readonly listenPort: number,
     private readonly transport: IP2PTransport,
-    private readonly tcpServerFactory: ITcpServerFactory = DEFAULT_TCP_SERVER_FACTORY,
+    private readonly tcpServerFactory: ITcpServerFactory = DEFAULT_TCP_SERVER_FACTORY
   ) {}
 
   start(): void {
@@ -96,7 +105,10 @@ export class TunnelListener {
       return;
     }
 
-    if (msg.type === MessageType.CLOSE || msg.type === MessageType.CONNECT_ERR) {
+    if (
+      msg.type === MessageType.CLOSE ||
+      msg.type === MessageType.CONNECT_ERR
+    ) {
       entry.remoteClosing = true;
       entry.socket.destroy();
       this.connections.delete(msg.connId);
@@ -112,7 +124,11 @@ export class TunnelListener {
     }
   }
 
-  private send(connId: number, type: MessageType, payload: Buffer = Buffer.alloc(0)): void {
+  private send(
+    connId: number,
+    type: MessageType,
+    payload: Buffer = Buffer.alloc(0)
+  ): void {
     this.transport.sendMessage(encodeMessage({ connId, type, payload }));
   }
 

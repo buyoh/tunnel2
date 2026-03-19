@@ -47,7 +47,10 @@ export class DaemonController {
     };
   }
 
-  async executeCommand(action: unknown, args: unknown): Promise<{ status: number; body: CommandResponse }> {
+  async executeCommand(
+    action: unknown,
+    args: unknown
+  ): Promise<{ status: number; body: CommandResponse }> {
     if (typeof action !== 'string' || action.length === 0) {
       return { status: 400, body: { ok: false, error: 'action is required' } };
     }
@@ -61,7 +64,9 @@ export class DaemonController {
     try {
       switch (action) {
         case 'listen':
-          await this.app.listen(this.getPortArg(normalizedArgs.value.port, 'listen.port'));
+          await this.app.listen(
+            this.getPortArg(normalizedArgs.value.port, 'listen.port')
+          );
           break;
         case 'connect-offer':
           await this.app.connectOffer();
@@ -69,20 +74,32 @@ export class DaemonController {
         case 'forward':
           await this.app.forward(
             this.getHostArg(normalizedArgs.value.host, 'forward.host'),
-            this.getPortArg(normalizedArgs.value.port, 'forward.port'),
+            this.getPortArg(normalizedArgs.value.port, 'forward.port')
           );
           break;
         case 'connect-accept':
           await this.app.connectAccept();
           break;
         case 'set-remote-offer':
-          await this.app.setRemoteOffer(this.getEncodedArg(normalizedArgs.value.encoded, 'set-remote-offer.encoded'));
+          await this.app.setRemoteOffer(
+            this.getEncodedArg(
+              normalizedArgs.value.encoded,
+              'set-remote-offer.encoded'
+            )
+          );
           break;
         case 'set-remote-answer':
-          await this.app.setRemoteAnswer(this.getEncodedArg(normalizedArgs.value.encoded, 'set-remote-answer.encoded'));
+          await this.app.setRemoteAnswer(
+            this.getEncodedArg(
+              normalizedArgs.value.encoded,
+              'set-remote-answer.encoded'
+            )
+          );
           break;
         case 'ping':
-          this.app.ping(this.getMessageArg(normalizedArgs.value.message, 'ping.message'));
+          this.app.ping(
+            this.getMessageArg(normalizedArgs.value.message, 'ping.message')
+          );
           break;
         case 'close':
           this.app.close();
@@ -112,19 +129,34 @@ export class DaemonController {
       this.events.push({ type, data, timestamp: new Date().toISOString() });
     };
 
-    this.app.on('offer-ready', (encoded: string) => push('offer-ready', encoded));
-    this.app.on('answer-ready', (encoded: string) => push('answer-ready', encoded));
+    this.app.on('offer-ready', (encoded: string) =>
+      push('offer-ready', encoded)
+    );
+    this.app.on('answer-ready', (encoded: string) =>
+      push('answer-ready', encoded)
+    );
     this.app.on('connected', () => push('connected'));
     this.app.on('disconnected', () => push('disconnected'));
-    this.app.on('pong-received', (message: string) => push('pong-received', message));
+    this.app.on('pong-received', (message: string) =>
+      push('pong-received', message)
+    );
     this.app.on('error', (err: Error) => push('error', err.message));
   }
 
   private recordLastCommand(action: string, ok: boolean, error?: string): void {
-    this.lastCommand = { action, ok, error, timestamp: new Date().toISOString() };
+    this.lastCommand = {
+      action,
+      ok,
+      error,
+      timestamp: new Date().toISOString(),
+    };
   }
 
-  private normalizeArgs(args: unknown): { ok: true; value: Record<string, unknown> } | { ok: false; error: string } {
+  private normalizeArgs(
+    args: unknown
+  ):
+    | { ok: true; value: Record<string, unknown> }
+    | { ok: false; error: string } {
     if (args === undefined || args === null) {
       return { ok: true, value: {} };
     }
@@ -135,7 +167,12 @@ export class DaemonController {
   }
 
   private getPortArg(value: unknown, field: string): number {
-    if (typeof value !== 'number' || !Number.isInteger(value) || value < 1 || value > 65535) {
+    if (
+      typeof value !== 'number' ||
+      !Number.isInteger(value) ||
+      value < 1 ||
+      value > 65535
+    ) {
       throw new Error(`${field} must be an integer between 1 and 65535`);
     }
     return value;

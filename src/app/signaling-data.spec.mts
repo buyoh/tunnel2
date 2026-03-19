@@ -1,4 +1,8 @@
-import { decodeSignaling, encodeSignaling, SignalingData } from './signaling-data.mjs';
+import {
+  decodeSignaling,
+  encodeSignaling,
+  SignalingData,
+} from './signaling-data.mjs';
 
 describe('signaling', () => {
   it('encodes and decodes signaling data', () => {
@@ -17,7 +21,7 @@ describe('signaling', () => {
   it('throws on invalid type', () => {
     const encoded = Buffer.from(
       JSON.stringify({ sdp: 'x', type: 'nope', candidates: [] }),
-      'utf-8',
+      'utf-8'
     ).toString('base64');
 
     expect(() => decodeSignaling(encoded)).toThrow('offer or answer');

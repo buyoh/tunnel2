@@ -38,7 +38,7 @@ describe('TunnelApp', () => {
         sdp: 'mock-answer',
         type: 'answer',
         candidates: [{ candidate: 'mock-candidate', mid: '0' }],
-      }),
+      })
     );
     transport.simulateOpen();
 
@@ -46,7 +46,11 @@ describe('TunnelApp', () => {
 
     const messages = transport.getSentMessages();
     const last = messages[messages.length - 1];
-    const decoded = encodeMessage({ connId: 0, type: MessageType.PING, payload: Buffer.from('hello', 'utf-8') });
+    const decoded = encodeMessage({
+      connId: 0,
+      type: MessageType.PING,
+      payload: Buffer.from('hello', 'utf-8'),
+    });
     expect(last.equals(decoded)).toBe(true);
   });
 
@@ -62,14 +66,14 @@ describe('TunnelApp', () => {
         sdp: 'mock-offer',
         type: 'offer',
         candidates: [{ candidate: 'mock-candidate', mid: '0' }],
-      }),
+      })
     );
     await alice.setRemoteAnswer(
       encodeSignaling({
         sdp: 'mock-answer',
         type: 'answer',
         candidates: [{ candidate: 'mock-candidate', mid: '0' }],
-      }),
+      })
     );
     a.simulateOpen();
     b.simulateOpen();
@@ -103,14 +107,14 @@ describe('TunnelApp', () => {
         sdp: 'mock-offer',
         type: 'offer',
         candidates: [{ candidate: 'mock-candidate', mid: '0' }],
-      }),
+      })
     );
     await alice.setRemoteAnswer(
       encodeSignaling({
         sdp: 'mock-answer',
         type: 'answer',
         candidates: [{ candidate: 'mock-candidate', mid: '0' }],
-      }),
+      })
     );
     a.simulateOpen();
     b.simulateOpen();

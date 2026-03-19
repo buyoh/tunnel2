@@ -10,7 +10,9 @@ function parseDaemonId(argv: string[]): string {
   const idx = argv.indexOf('--id');
   const id = idx !== -1 && idx + 1 < argv.length ? argv[idx + 1] : 'default';
   if (!/^[a-zA-Z0-9_-]+$/.test(id)) {
-    throw new Error(`Invalid daemon id: ${id} (alphanumeric, hyphen, underscore only)`);
+    throw new Error(
+      `Invalid daemon id: ${id} (alphanumeric, hyphen, underscore only)`
+    );
   }
   return id;
 }
@@ -40,7 +42,9 @@ async function main(): Promise<void> {
   // PID ファイルを書き込む
   fs.writeFileSync(PID_FILE, String(process.pid), 'utf-8');
 
-  console.log(`Daemon started (id=${DAEMON_ID}, pid=${process.pid}, socket=${SOCK_FILE})`);
+  console.log(
+    `Daemon started (id=${DAEMON_ID}, pid=${process.pid}, socket=${SOCK_FILE})`
+  );
 
   const shutdown = async (): Promise<void> => {
     console.log('Shutting down daemon...');

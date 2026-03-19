@@ -1,6 +1,10 @@
 import nodeDataChannel from 'node-datachannel';
 import { SignalingData } from '../signaling-data.mjs';
-import { IP2PTransport, P2PChannelState, P2PTransportEvents } from './p2p-transport.mjs';
+import {
+  IP2PTransport,
+  P2PChannelState,
+  P2PTransportEvents,
+} from './p2p-transport.mjs';
 
 type DataChannelMessage = string | Buffer | ArrayBuffer;
 
@@ -32,7 +36,10 @@ interface PeerConnectionLike {
 
 /** node-datachannel モジュールの型抽象（DI 用）。 */
 interface NodeDataChannelModule {
-  PeerConnection: new (label: string, config: { iceServers: string[] }) => PeerConnectionLike;
+  PeerConnection: new (
+    label: string,
+    config: { iceServers: string[] }
+  ) => PeerConnectionLike;
 }
 
 /** DataChannelTransport の生成オプション。 */
@@ -59,7 +66,8 @@ export class DataChannelTransport implements IP2PTransport {
       iceServers: config.iceServers ?? DEFAULT_ICE_SERVERS,
     };
     this.nodeDataChannelModule =
-      config.nodeDataChannelModule ?? (nodeDataChannel as unknown as NodeDataChannelModule);
+      config.nodeDataChannelModule ??
+      (nodeDataChannel as unknown as NodeDataChannelModule);
   }
 
   setEvents(events: P2PTransportEvents): void {
@@ -126,7 +134,10 @@ export class DataChannelTransport implements IP2PTransport {
   }
 
   setBufferedAmountLowThreshold(size: number): void {
-    if (!this.dc || typeof this.dc.setBufferedAmountLowThreshold !== 'function') {
+    if (
+      !this.dc ||
+      typeof this.dc.setBufferedAmountLowThreshold !== 'function'
+    ) {
       return;
     }
     this.dc.setBufferedAmountLowThreshold(size);
@@ -151,7 +162,10 @@ export class DataChannelTransport implements IP2PTransport {
   }
 
   private createPeer(): void {
-    if (!this.nodeDataChannelModule || typeof this.nodeDataChannelModule.PeerConnection !== 'function') {
+    if (
+      !this.nodeDataChannelModule ||
+      typeof this.nodeDataChannelModule.PeerConnection !== 'function'
+    ) {
       throw new Error('node-datachannel is not available');
     }
     this.peer = new this.nodeDataChannelModule.PeerConnection('tunnel', {
@@ -191,7 +205,9 @@ export class DataChannelTransport implements IP2PTransport {
     }
   }
 
-  private waitForLocalDescription(type: 'offer' | 'answer'): Promise<SignalingData> {
+  private waitForLocalDescription(
+    type: 'offer' | 'answer'
+  ): Promise<SignalingData> {
     const peer = this.peer;
     if (!peer) {
       throw new Error('Peer is not initialized');

@@ -64,7 +64,10 @@ describe('DaemonController', () => {
     });
 
     it('forward コマンドが成功し 200 を返す', async () => {
-      const res = await controller.executeCommand('forward', { host: 'localhost', port: 9999 });
+      const res = await controller.executeCommand('forward', {
+        host: 'localhost',
+        port: 9999,
+      });
 
       expect(res.status).toBe(200);
       expect(res.body.ok).toBe(true);
@@ -86,16 +89,13 @@ describe('DaemonController', () => {
 
     it('ping コマンドが成功し 200 を返す', async () => {
       await controller.executeCommand('connect-offer', {});
-      await controller.executeCommand(
-        'set-remote-answer',
-        {
-          encoded: encodeSignaling({
-            sdp: 'mock-answer',
-            type: 'answer',
-            candidates: [{ candidate: 'mock-candidate', mid: '0' }],
-          }),
-        },
-      );
+      await controller.executeCommand('set-remote-answer', {
+        encoded: encodeSignaling({
+          sdp: 'mock-answer',
+          type: 'answer',
+          candidates: [{ candidate: 'mock-candidate', mid: '0' }],
+        }),
+      });
       transport.simulateOpen();
 
       const res = await controller.executeCommand('ping', { message: 'hello' });
@@ -130,16 +130,13 @@ describe('DaemonController', () => {
 
     it('ping の空 message を 400 で弾く', async () => {
       await controller.executeCommand('connect-offer', {});
-      await controller.executeCommand(
-        'set-remote-answer',
-        {
-          encoded: encodeSignaling({
-            sdp: 'mock-answer',
-            type: 'answer',
-            candidates: [{ candidate: 'mock-candidate', mid: '0' }],
-          }),
-        },
-      );
+      await controller.executeCommand('set-remote-answer', {
+        encoded: encodeSignaling({
+          sdp: 'mock-answer',
+          type: 'answer',
+          candidates: [{ candidate: 'mock-candidate', mid: '0' }],
+        }),
+      });
       transport.simulateOpen();
 
       const res = await controller.executeCommand('ping', { message: '' });
