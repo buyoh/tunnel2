@@ -1,0 +1,14 @@
+{
+  "name": "@tunnel2/signaling-server",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node --import ../../register.mjs src/index.mts"
+  },
+  "dependencies": {
+    "@tunnel2/signaling-types": "*",
+    "express": "^5.2.1",
+    "socket.io": "^4.8.1"
+  }
+}

@@ -9,3 +9,4 @@
 - [review-refactor/](./review-refactor/) - コード品質レビュー・リファクタリング
 - [datachannel-remove-any.md](./datachannel-remove-any.md) - datachannel.mts の any 型を具体型に置換
 - [echo-ping/](./echo-ping/) - P2P 疎通確認用の PING/PONG メッセージ機能
+- [signaling-server/](./signaling-server/) - WebSocket ベースのシグナリングサーバとクライアント統合

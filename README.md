@@ -41,6 +41,32 @@ npm run start -- forward localhost:3000
 6. **Alice**: Paste Bob's answer info into the prompt
 7. P2P connection is established — connections to Alice's `<port>` are forwarded to Bob's `<host:port>`
 
+### WebSocket Signaling Mode
+
+Start the signaling server:
+
+```bash
+npm run signaling-server
+```
+
+Use the WebSocket-based CLI when a signaling server is available.
+
+#### Alice (listen side)
+
+```bash
+npm run start -- ws-listen --server http://localhost:3000 --key ./alice.key --pubkey ./alice.pub --room demo --port 8080
+```
+
+#### Bob (forward side)
+
+```bash
+npm run start -- ws-forward --server http://localhost:3000 --key ./bob.key --pubkey ./bob.pub --room demo --target localhost:3000
+```
+
+- Both clients authenticate with Ed25519 keys.
+- The signaling server matches peers by group and room.
+- After the P2P DataChannel is established, the WebSocket connection is closed automatically.
+
 ### Daemon Mode
 
 Use shell scripts to run in the background.

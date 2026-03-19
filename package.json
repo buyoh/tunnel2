@@ -5,18 +5,25 @@
   "version": "1.0.0",
   "description": "",
   "author": "",
+  "workspaces": [
+    "packages/*"
+  ],
   "engines": {
     "node": ">=20.0.0"
   },
   "scripts": {
     "start": "node --import ./register.mjs src/index.mts",
     "daemon": "node --import ./register.mjs src/daemon.mts",
+    "signaling-server": "node --import ./register.mjs packages/signaling-server/src/index.mts",
     "test": "NODE_OPTIONS=--experimental-vm-modules jest --runInBand"
   },
   "dependencies": {
+    "@tunnel2/signaling-types": "*",
     "dotenv": "^17.2.4",
     "express": "^5.2.1",
-    "node-datachannel": "^0.32.1"
+    "node-datachannel": "^0.32.1",
+    "socket.io": "^4.8.1",
+    "socket.io-client": "^4.8.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.28.0",

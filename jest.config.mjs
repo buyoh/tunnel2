@@ -5,9 +5,10 @@ export default {
   extensionsToTreatAsEsm: ['.mts'],
   moduleNameMapper: {
     '^(\\.{1,2}/.*)\\.mjs$': '$1',
+    '^@tunnel2/signaling-types$': '<rootDir>/packages/signaling-types/src/index.mts',
   },
   transform: {
-    '^.+\\.mts$': ['ts-jest', { useESM: true }],
+    '^.+\\.mts$': ['ts-jest', { useESM: true, tsconfig: '<rootDir>/tsconfig.json' }],
   },
-  testMatch: ['<rootDir>/src/**/*.spec.mts'],
+  testMatch: ['<rootDir>/src/**/*.spec.mts', '<rootDir>/packages/**/*.spec.mts'],
 };

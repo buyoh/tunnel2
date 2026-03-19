@@ -2,6 +2,15 @@
 
 WebSocket ベースのシグナリングサーバを新規作成し、既存のコピペ方式に加えて自動的に SDP/ICE Candidate を交換できるようにする。
 
+## 進捗
+
+- [x] `packages/signaling-types/` を追加し、Socket.IO メッセージ型を定義
+- [x] `packages/signaling-server/` を追加し、公開鍵認証・レートリミット・ルームマッチング・Signal relay を実装
+- [x] `src/app/ws-signaling.mts` を追加し、WebSocket シグナリングと P2P 切断時の再接続を実装
+- [x] `src/app/ws-cli.mts` と `src/index.mts` を更新し、`ws-listen` / `ws-forward` を追加
+- [x] `jest.config.mjs` と `tsconfig.json` を更新し、workspace 配下の `.mts` テストを実行可能にした
+- [x] Unit テストと Socket.IO 結合テストを追加し、`npm test` で 52 テスト全件成功を確認
+
 ## サブプロジェクト構成
 
 | パッケージ | パス | 概要 |
