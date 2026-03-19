@@ -15,7 +15,9 @@
     "start": "node --import ./register.mjs src/index.mts",
     "daemon": "node --import ./register.mjs src/daemon.mts",
     "signaling-server": "node --import ./register.mjs packages/signaling-server/src/index.mts",
-    "test": "NODE_OPTIONS=--experimental-vm-modules jest --runInBand"
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest --runInBand",
+    "lint": "prettier --check 'src/**/*.mts' && eslint src/**/*.mts",
+    "lint-fix": "prettier --write 'src/**/*.mts'"
   },
   "dependencies": {
     "@tunnel2/signaling-types": "*",
