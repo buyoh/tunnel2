@@ -8,33 +8,33 @@
 
 以下の構造体（type / interface / enum / class）にドキュメントコメントが無い。
 
-### src/app/app.mts
+### src/app/tunnel-app.mts
 
 | 構造体 | 種別 | 追加するコメント案 |
 |--------|------|-------------------|
 | `AppState` | type | P2P 接続のライフサイクルを表す状態。 |
 
-### src/app/protocol.mts
+### src/app/protocol-message.mts
 
 | 構造体 | 種別 | 追加するコメント案 |
 |--------|------|-------------------|
 | `MessageType` | enum | 多重化プロトコルのメッセージ種別。 |
 | `ProtocolMessage` | interface | connId・種別・ペイロードからなるプロトコルメッセージ。 |
 
-### src/app/signaling.mts
+### src/app/signaling-data.mts
 
 | 構造体 | 種別 | 追加するコメント案 |
 |--------|------|-------------------|
 | `SignalingCandidate` | interface | ICE candidate 情報。 |
 | `SignalingData` | interface | SDP と ICE candidate をまとめたシグナリング情報。 |
 
-### src/app/tunnel.mts
+### src/app/tcp-socket.mts
 
 | 構造体 | 種別 | 追加するコメント案 |
 |--------|------|-------------------|
 | `ConnectionEntry` | interface | トンネルで管理される個別 TCP 接続の状態。 |
 
-### src/app/transport/interface.mts
+### src/app/transport/p2p-transport.mts
 
 | 構造体 | 種別 | 追加するコメント案 |
 |--------|------|-------------------|
@@ -42,7 +42,7 @@
 | `P2PTransportEvents` | interface | P2P トランスポートが発火するイベントハンドラ群。 |
 | `IP2PTransport` | interface | P2P トランスポートの抽象インタフェース。 |
 
-### src/app/transport/datachannel.mts
+### src/app/transport/data-channel-transport.mts
 
 | 構造体 | 種別 | 追加するコメント案 |
 |--------|------|-------------------|
@@ -58,4 +58,4 @@
 
 ## ステータス
 
-- [ ] ドキュメントコメント追加
+- [x] ドキュメントコメント追加
